@@ -518,7 +518,7 @@
       </div>
       <p><button id="mRun">Analisar Multi Casas</button></p>
       <p><button id="mDownload" disabled>Baixar Excel</button></p>
-      <p class="muted small">Betano, Superbet, EstrelaBet, Bet365 e Sportingbet têm extratores específicos. A Bet365 é lida a partir de matchbettingcontentapi/coupon e betbuilderpregamecontentapi/wizard, convertendo odds fracionárias para decimal. A v16 bloqueia comparações entre chutes no gol, finalizações e tiros de meta e também mercados combinados como Result / Total Goals quando não forem o mesmo mercado.</p>
+      <p class="muted small">Betano, Superbet, EstrelaBet, Bet365 e Sportingbet têm extratores específicos. A Bet365 é lida a partir de matchbettingcontentapi/coupon e betbuilderpregamecontentapi/wizard, convertendo odds fracionárias para decimal. Modo desempenho: com 5 casas, o app compara por pares e mostra as melhores oportunidades na tela para não travar. Use ROI mínimo ou filtro do jogo para reduzir a análise.</p>
     </div>
 
     <div class="card"><b>Status Multi</b><div id="mLog" class="log">Aguardando arquivos...</div></div>
@@ -1185,6 +1185,27 @@ function hasAnyThreshold(g){
   return /\b\d+(?:[.,]\d+)?\s*(?:\+|ou mais|ou menos)\b/.test(txt) || /\b(?:mais|menos|acima|abaixo|over|under)\s+(?:de\s+)?\d/.test(txt);
 }
 function lineLabelForKey(n){return n===null?'sem_linha':String(Number(n.toFixed? n.toFixed(4):n)).replace(/\.0+$/,'');}
+
+function hasResultConditionText(g){
+  const x=normMarket([g?.market_name, ...(g?.outcomes||[]).map(o=>o.outcome)].join(' '));
+  return /\b(vence|vencer|ganha|ganhar|lidera|resultado|1x2|chance dupla|empate|x2|12|1x)\b/.test(x);
+}
+function hasCleanSheetText(g){
+  const x=normMarket([g?.market_name, ...(g?.outcomes||[]).map(o=>o.outcome)].join(' '));
+  return x.includes('sem sofrer gols') || x.includes('nao sofre gol') || x.includes('clean sheet') || x.includes('sofrer gols');
+}
+function hasWinCleanSheetCombo(g){
+  return hasCleanSheetText(g) && hasResultConditionText(g);
+}
+function marketConceptFlags(g){
+  const x=normMarket([g?.market_name, ...(g?.outcomes||[]).map(o=>o.outcome)].join(' '));
+  return {
+    clean: hasCleanSheetText(g),
+    result: hasResultConditionText(g),
+    total: x.includes('total'),
+    interval: /\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}/.test(x)
+  };
+}
 function strictMarketSignature(g){
   const x=normMarket(g?.market_name||'');
   const cat=g?.category||category(x);
@@ -1196,7 +1217,10 @@ function strictMarketSignature(g){
   if(cat==='ambas marcam combo') return `btts_combo_${line}_${g?.period||''}_${x.replace(/\s+/g,'_')}`;
   if(cat==='gols contra') return `gols_contra_${line}_${g?.period||''}`;
   if(cat==='gols combo') return `gols_combo_${line}_${g?.period||''}_${x.replace(/\s+/g,'_')}`;
-  if(cat==='sem sofrer gols') return `sem_sofrer_gols_${team}_${g?.period||''}`;
+  if(cat==='sem sofrer gols'){
+    const combo=hasWinCleanSheetCombo(g)?'resultado_e_clean_sheet':'clean_sheet_simples';
+    return `${combo}_${team}_${g?.period||''}`;
+  }
   if(cat==='qualificar') return `qualificar_${team}`;
   if(cat==='resultado'){
     if(x.includes('chance dupla')) return `chance_dupla_${g?.period||''}`;
@@ -1222,7 +1246,7 @@ function isComplexYesNo(g){
     hasAnyThreshold(g) ||
     x.includes('ambos tempos') || x.includes('ambos os tempos') || x.includes('cada tempo') ||
     x.includes('ambas equipes') || x.includes('cada equipe') || x.includes('cada time') || x.includes('cada uma') ||
-    ['cartoes','cartoes amarelos','cartoes vermelhos','gols','gols combo','escanteios','faltas','finalizacoes','chutes no gol'].includes(g?.category)
+    ['cartoes','cartoes amarelos','cartoes vermelhos','gols','gols combo','escanteios','faltas','finalizacoes','chutes no gol','sem sofrer gols','resultado'].includes(g?.category) || hasWinCleanSheetCombo(g)
   );
 }
 
@@ -1724,9 +1748,99 @@ function extractEstrelaGroups(event){
   return {groups,markets,oddsN,source:event.__sourceUrl||''};
 }
 
+
+
+function marketConceptType(g){
+  if(isEachTeamThresholdMarket && isEachTeamThresholdMarket(g)) return 'each_team_threshold';
+
+  const raw = [
+    g?.market_name || '',
+    g?.market_norm || '',
+    ...(g?.outcomes || []).map(o => [o.outcome, o.out_norm].filter(Boolean).join(' '))
+  ].join(' ');
+  const x = normBasic(raw);
+
+  const hasTeam = !!g?.team;
+  const cat = String(g?.category || '');
+
+  if(x.includes('ambas equipes') || x.includes('ambas as equipes') || x.includes('both teams')) return 'both_teams_generic';
+  if(hasTeam) return 'team_' + cat;
+  return 'match_' + cat;
+}
+
+function equivalentMarketConcept(a,b){
+  const ca = marketConceptType(a), cb = marketConceptType(b);
+
+  // "Cada equipe mais de X" é um conceito composto. Só compara com o mesmo conceito.
+  if(ca === 'each_team_threshold' || cb === 'each_team_threshold'){
+    if(ca !== cb) return [false, 'cada equipe/both teams não equivale a mercado de time ou total'];
+    if((a?.category||'') !== (b?.category||'')) return [false, 'cada equipe com categoria diferente'];
+    if((a?.period||'') !== (b?.period||'')) return [false, 'cada equipe com período diferente'];
+    const la = (a?.line!==undefined && a?.line!==null) ? Number(a.line) : lineFromOutcomes(a?.outcomes||[]);
+    const lb = (b?.line!==undefined && b?.line!==null) ? Number(b.line) : lineFromOutcomes(b?.outcomes||[]);
+    if(Number.isFinite(la) && Number.isFinite(lb) && Math.abs(la-lb) > 0.0001) return [false, 'cada equipe com linha diferente'];
+    return [true, 'cada equipe equivalente'];
+  }
+
+  // Mercado de time não é mercado total.
+  if(ca !== cb){
+    const statCats = new Set(['gols','gols combo','escanteios','cartoes','cartoes vermelhos','cartoes amarelos','chutes no gol','finalizacoes','impedimentos','faltas','desarmes','passes','defesas','laterais','tiros de meta','gols contra','sem sofrer gols']);
+    if(statCats.has(a?.category) || statCats.has(b?.category)){
+      return [false, `conceito diferente ${ca} != ${cb}`];
+    }
+  }
+
+  return [true, 'conceito equivalente'];
+}
+
+function isEachTeamThresholdMarket(g){
+  const raw = [
+    g?.market_name || '',
+    g?.market_norm || '',
+    ...(g?.outcomes || []).map(o => [o.outcome, o.out_norm].filter(Boolean).join(' '))
+  ].join(' ');
+  const x = normBasic(raw);
+  const hasEachTeam =
+    x.includes('cada equipe') ||
+    x.includes('cada time') ||
+    x.includes('cada equipa') ||
+    x.includes('ambas equipes') ||
+    x.includes('ambas as equipes') ||
+    x.includes('ambos times') ||
+    x.includes('ambos os times') ||
+    x.includes('cada uma') ||
+    x.includes('each team') ||
+    x.includes('both teams') ||
+    x.includes('both teams to receive') ||
+    x.includes('both teams receive');
+  const hasThreshold =
+    /\b(mais|menos|over|under)\s*(?:de)?\s*\d/.test(x) ||
+    /\b\d+(?:[.,]\d+)?\+?\s*(cartoes|cards)\b/.test(x) ||
+    x.includes('receberem cartoes') ||
+    x.includes('receber cartoes') ||
+    x.includes('receive cards');
+  return hasEachTeam && hasThreshold;
+}
+function eachTeamThresholdSignature(g){
+  if(!isEachTeamThresholdMarket(g)) return '';
+  let line = (g?.line!==undefined && g?.line!==null) ? Number(g.line) : lineFromOutcomes(g?.outcomes||[]);
+  if(!(line>=0)) line='';
+  return ['each_team_threshold', g?.category||'', g?.period||'', String(line)].join('|');
+}
+
 function accept(bg,sg){
   const outs=outcomeSet(bg).split('|').filter(Boolean);
+  const [conceptOk, conceptReason] = equivalentMarketConcept(bg, sg);
+  if(!conceptOk) return [false, conceptReason, 0];
   if(outcomeSet(bg)!==outcomeSet(sg)) return [false,'outcomes diferentes',0];
+
+  // Filtro v53: não comparar mercado simples com mercado condicionado.
+  // Ex.: "Egito sem sofrer gols" NÃO é o mesmo que
+  // "Egito vence o 1º tempo sem sofrer gols".
+  const flagsB=marketConceptFlags(bg), flagsS=marketConceptFlags(sg);
+  if(flagsB.clean!==flagsS.clean || flagsB.result!==flagsS.result){
+    return [false,'mercado simples vs mercado condicionado/resultado',0];
+  }
   // Filtro v16: não comparar mercados combinados com mercados simples.
   // Ex.: Bet365 "Result / Total Goals" NÃO é "Total de Gols".
   if(isCompoundNonCoverMarket(bg) || isCompoundNonCoverMarket(sg)){
@@ -1937,7 +2051,7 @@ function computeWithStakeLimits(m, maxSuper, maxBetano, bonus, roiMin){
 }
 async function run(){
   logEl.textContent='Iniciando...'; tbl.innerHTML=''; document.getElementById('summary').textContent=''; document.getElementById('download').disabled=true; lastRows=[];
-  const bf=document.getElementById('betano').files[0], sf=document.getElementById('superbet').files[0]; if(!bf||!sf) throw new Error('Selecione os dois arquivos.');
+  const bf=getSelectedFile('betano'), sf=getSelectedFile('superbet'); if(!bf||!sf) throw new Error('Selecione os dois arquivos.');
   const stakeSuper=parseFloat(document.getElementById('stakeSuper').value||'100'), stakeBetano=parseFloat(document.getElementById('stakeBetano').value||'100'), bonus=parseFloat(document.getElementById('bonus').value||'30')/100, roiMin=parseFloat(document.getElementById('roiMin').value||'0');
 
   const bItems=await readTextItems(bf); log(`Betano: ${bItems.length} arquivo(s) de texto lidos`);
@@ -2325,7 +2439,7 @@ function bet365FracToDecimal(v){
 function bet365IsOverUnder(s){return /^(over|under|mais|menos)$/i.test(String(s||'').trim());}
 function bet365IsYesNo(s){return /^(yes|no|sim|nao)$/i.test(String(s||'').trim());}
 function bet365LineFromParts(pa, ma, label, outcome){
-  const vals=[pa?.HD, pa?.HA, ma?.HA, ma?.HD, label, ma?.ED, outcome];
+  const vals=[pa?.NA, pa?.HD, pa?.HA, ma?.HA, ma?.HD, label, ma?.ED, outcome];
   for(let v of vals){
     if(v===null||v===undefined) continue;
     v=String(v).trim(); if(!v) continue;
@@ -2349,9 +2463,13 @@ function bet365MakeSelection(mg, ma, pa, labels){
   if(!marketName || marketName.startsWith('**')) return null;
 
   if(bet365IsOverUnder(maName)){
-    // Ex.: MG Alternative Total Goals / MA Over / label 2.5 => outcome "Over 2.5".
-    outcome=[maName, (label && /^-?\d/.test(label) ? label : (pa.HD||pa.HA||''))].filter(Boolean).join(' ').trim();
-    if(paName && !/^\d/.test(paName)) outcome=[paName, maName, (pa.HD||pa.HA||label||'')].filter(Boolean).join(' ').trim();
+    // Ex.: MG Alternative Total Goals / MA Over / PA.NA 3.5 => outcome "Over 3.5".
+    // A Bet365 pode mandar a linha no próprio PA.NA junto da odd. Quando isso acontece,
+    // NÃO devemos usar labels por posição, porque pode deslocar a linha e dar odd errada.
+    const numericPaName=/^-?\d+(?:[.,]\d+)?$/.test(paName);
+    const lineTxt = numericPaName ? paName : ((label && /^-?\d/.test(label)) ? label : (pa.HD||pa.HA||''));
+    outcome=[maName, lineTxt].filter(Boolean).join(' ').trim();
+    if(paName && !numericPaName) outcome=[paName, maName, (pa.HD||pa.HA||label||'')].filter(Boolean).join(' ').trim();
   }else if(bet365IsYesNo(maName)){
     // Ex.: Both Teams to Receive Cards / label 2+ Cards / MA Yes-No.
     if(label && !/^\s*$/.test(label)) marketName=[mgName,label].join(' - ');
@@ -2380,7 +2498,7 @@ function bet365TextsFromItems(items){
         const url=String(e?.request?.url||'');
         const rt=getResponseText(e);
         if(!rt || !rt.includes('OD=')) continue;
-        if(url.includes('matchbettingcontentapi/coupon') || url.includes('betbuilderpregamecontentapi/wizard') || rt.includes('MG;')) texts.push({name:url||it.name,text:rt});
+        if(url.includes('matchbettingcontentapi/coupon') || (!url.includes('betbuilderpregamecontentapi/wizard') && rt.includes('MG;'))) texts.push({name:url||it.name,text:rt});
       }
     }else if(it.t && it.t.includes('MG;') && it.t.includes('OD=')){
       texts.push({name:it.name,text:it.t});
@@ -2388,6 +2506,98 @@ function bet365TextsFromItems(items){
   }
   return texts;
 }
+
+function bet365BetBuilderTextsFromItems(items){
+  const texts=[];
+  for(const it of items){
+    const obj=parseJson(it.t);
+    if(obj?.log?.entries){
+      for(const e of obj.log.entries){
+        const url=String(e?.request?.url||'');
+        const rt=getResponseText(e);
+        if(rt && url.includes('betbuilderpregamecontentapi/wizard') && rt.includes('EV;') && rt.includes('Cartões')) texts.push({name:url||it.name,text:rt});
+      }
+    }else if(it.t && it.t.includes('EV;') && it.t.includes('Cartões') && it.t.includes('BB197')){
+      texts.push({name:it.name,text:it.t});
+    }
+  }
+  return texts;
+}
+function bbPeriodFromText(s){
+  const x=normBasic(s||'');
+  if(x.includes('1 tempo') || x.includes('1º tempo') || x.includes('1o tempo')) return '1T';
+  if(x.includes('2 tempo') || x.includes('2º tempo') || x.includes('2o tempo')) return '2T';
+  if(x.includes('primeiros 10') || x.includes('primeiros 5') || x.includes('minutos')) return 'Intervalo específico';
+  return 'Jogo';
+}
+function bbTeamFromText(s){
+  const raw=String(s||'').trim();
+  const x=normBasic(raw);
+  if(!x) return '';
+  if(x.includes('ambos os times') || x.includes('ambos times') || x.includes('combinados') || x.includes('ambas equipes')) return '';
+  return teamKey(raw) || x;
+}
+function extractBet365BetBuilderCardGroups(items, filter){
+  const groupsBy={}; let oddsN=0;
+  const texts=bet365BetBuilderTextsFromItems(items);
+  for(const item of texts){
+    const recs=String(item.text||'').split('|');
+    let inCards=false, ma={};
+    for(const rec of recs){
+      if(rec.startsWith('EV;')){
+        const ev=bet365Fields(rec);
+        inCards = normBasic(ev.NA||'').includes('cartoes');
+        ma={};
+      }else if(inCards && rec.startsWith('MA;')){
+        ma=bet365Fields(rec);
+      }else if(inCards && rec.startsWith('PA;')){
+        const pa=bet365Fields(rec);
+        const odd=bet365FracToDecimal(pa.OD);
+        if(!odd || String(pa.SU||'0')==='1') continue;
+
+        const maName=String(ma.NA||ma.S1||ma.B2||'').trim();
+        if(!/^(Mais de|Menos de|Exatamente)$/i.test(maName)) continue;
+
+        const period=bbPeriodFromText([ma.S3,ma.B5,pa.ST].join(' '));
+        if(period==='Intervalo específico') continue;
+        const team=bbTeamFromText([ma.S4,ma.B8].join(' '));
+        const teamLabel=team?titleTxt(team):'Total';
+        const periodLabel=period==='1T'?'1º Tempo':period==='2T'?'2º Tempo':'Jogo';
+        const lineRaw=pa.HA || pa.S2 || pa.B1 || '';
+        const m=String(lineRaw).match(/([+-]?\d+(?:[.,]\d+)?)/);
+        if(!m) continue;
+        const line=parseFloat(m[1].replace(',','.'));
+        if(!Number.isFinite(line)) continue;
+
+        const dir=maName.toLowerCase().startsWith('mais')?'Mais de':maName.toLowerCase().startsWith('menos')?'Menos de':'Exatamente';
+        const marketName=`${periodLabel} - Cartões - 3 opções${team?` - ${teamLabel}`:''}`;
+        const outcome=`${dir} ${line} cartões`;
+        const out=normOutcome(outcome,'',String(line));
+        if(!out) continue;
+        const key=['Bet365','BB_CARDS_3WAY',period,team,line].join('|');
+        const g=(groupsBy[key] ||= {
+          book:'Bet365',
+          market_id:key,
+          market_name:marketName,
+          market_norm:normMarket(marketName),
+          line,
+          outcomes:[],
+          period,
+          category:'cartoes',
+          team
+        });
+        const prev=g.outcomes.find(o=>o.out_norm===out);
+        const sel={book:'Bet365',market_id:key,market_name:marketName,line,outcome,out_norm:out,odd,selection_id:String(pa.ID||pa.IT||'')};
+        if(!prev) g.outcomes.push(sel);
+        else if(odd>prev.odd){prev.odd=odd; prev.outcome=outcome; prev.selection_id=sel.selection_id;}
+        oddsN++;
+      }
+    }
+  }
+  return {groups:Object.values(groupsBy).filter(g=>g.outcomes.length>=2), oddsN};
+}
+
+
 function configureTeamsFromBet365Texts(texts){
   for(const item of texts){
     const recs=String(item.text||'').split('|');
@@ -2421,7 +2631,7 @@ function extractBet365Groups(items, filter){
         if(!odd || String(pa.SU||'0')==='1') continue;
         // Em várias tabelas da Bet365, os PAs de Under/No/Exactly usam IDs diferentes dos labels.
         // A relação correta é pela posição da coluna/linha; por isso copiamos o label pela ordem.
-        if(!labels[id] && labelOrder[maPaIndex]) labels[id]=labelOrder[maPaIndex];
+        if(!labels[id] && !(pa.NA||pa.HD||pa.HA) && labelOrder[maPaIndex]) labels[id]=labelOrder[maPaIndex];
         maPaIndex++;
         const sel=bet365MakeSelection(mg,ma,pa,labels);
         if(!sel) continue;
@@ -2458,10 +2668,16 @@ function extractBet365Groups(items, filter){
     if(!prev) g.outcomes.push({book:'Bet365', market_id:r.market_id, market_name:r.market_name, line:r.line, outcome:r.outcome, out_norm:r.out_norm, odd:r.odd, selection_id:r.selection_id});
     else if(r.odd>prev.odd){prev.odd=r.odd; prev.outcome=r.outcome; prev.selection_id=r.selection_id;}
   }
-  const groups=Object.values(by).filter(g=>g.outcomes.length>=2).map(g=>{
+  let groups=Object.values(by).filter(g=>g.outcomes.length>=2).map(g=>{
     if(g.line===null || g.line===undefined) g.line=lineFromOutcomes(g.outcomes);
     return g;
   });
+  const bb=extractBet365BetBuilderCardGroups(items, filter);
+  if(bb.groups.length){
+    groups=groups.concat(bb.groups);
+    oddsN+=bb.oddsN;
+    for(const g of bb.groups) markets.push({book:'Bet365', market_id:g.market_id, market_name:g.market_name, active_odds:g.outcomes.length, raw_selections:g.outcomes.length, period:g.period, category:g.category, team:g.team, source:'BetBuilder Cards'});
+  }
   return {groups,markets,oddsN,source:texts[0]?.name||''};
 }
 
@@ -2615,6 +2831,168 @@ async function extractBookUniversal(book, file, stake, bonusPct, filter){
   return {book,file:file.name,stake,bonus:bonusPct/100,groups:ded,markets,oddsN,mode};
 }
 function twoWay(g){return g.outcomes.length===2 && outcomeSet(g).split('|').filter(Boolean).length===2;}
+
+// ===== v58: linha cruzada segura, sem criar combo automático =====
+// Exemplo válido: Superbet Menos de 1.5 cartões 1T x Bet365 Mais de 1.0 cartões 1T - 3 opções.
+// Não cria seleções extras; só compara linhas que já existem nos arquivos.
+function dirLineFromOutcomeSafe(out){
+  const s=normBasic(out||'');
+  const m=s.match(/\b(mais|menos|over|under)\s+([+-]?\d+(?:[.,]\d+)?)/);
+  if(!m) return null;
+  let dir=(m[1]==='mais'||m[1]==='over')?'mais':'menos';
+  const line=parseFloat(m[2].replace(',','.'));
+  if(!Number.isFinite(line)) return null;
+  // Em mercados Sim/Não, "Mais de X - Não" NÃO é over; é o lado contrário.
+  // Isso evita falso positivo tipo "Mais de 0.5 - Não" contra "Menos de 1".
+  const isNo=/\b(nao|não|no)\b/.test(s);
+  const isYes=/\b(sim|yes)\b/.test(s);
+  if(isNo && !isYes) dir = dir==='mais' ? 'menos' : 'mais';
+  return {dir,line};
+}
+function isBadCrossPeriodMarket(g){
+  const x=normMarket(g?.market_name||'');
+  // Evita repetir o erro dos mercados tipo "Primeiros 5 min" ou intervalos específicos.
+  return /primeiros?\s+\d+/.test(x) || /\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}/.test(x);
+}
+function isSafeIntegerStatCategory(c){
+  return ['cartoes','cartoes amarelos','cartoes vermelhos','escanteios','faltas','finalizacoes','chutes no gol','laterais','tiros de meta','desarmes','impedimentos'].includes(String(c||''));
+}
+function isSafeCrossLinePair(outA,outB){
+  const a=dirLineFromOutcomeSafe(outA), b=dirLineFromOutcomeSafe(outB);
+  if(!a||!b||a.dir===b.dir) return false;
+  const over=a.dir==='mais'?a:b;
+  const under=a.dir==='menos'?a:b;
+  // Para mercado de 3 opções da Bet365:
+  // Mais de 1.0 cobre 2+; Menos de 1.5 cobre 0-1.
+  // Então a diferença correta é under = over + 0.5.
+  return Math.abs(under.line - (over.line + 0.5)) < 0.0001;
+}
+function marketBaseCompatibleSafeCross(a,b){
+  if(isEachTeamThresholdMarket(a) || isEachTeamThresholdMarket(b)) return [false,'cada equipe/both teams não usa linha cruzada; usa comparação direta equivalente',0];
+  if(a.category!==b.category) return [false,`categoria ${a.category} != ${b.category}`,0];
+  if(!isSafeIntegerStatCategory(a.category)) return [false,'categoria não habilitada para linha cruzada segura',0];
+  if(a.period!==b.period) return [false,`periodo ${a.period} != ${b.period}`,0];
+  if(isBadCrossPeriodMarket(a) || isBadCrossPeriodMarket(b)) return [false,'mercado de intervalo específico ignorado',0];
+  if(a.team && b.team && a.team!==b.team) return [false,'time diferente',0];
+  if((!!a.team)!=(!!b.team)) return [false,'time específico vs total',0];
+
+  const psA=preciseStatCategory([a.market_name,...(a.outcomes||[]).map(o=>o.outcome)].join(' '));
+  const psB=preciseStatCategory([b.market_name,...(b.outcomes||[]).map(o=>o.outcome)].join(' '));
+  if(psA && psB && psA!==psB) return [false,`estatistica diferente ${psA} != ${psB}`,0];
+
+  const flagsA=marketConceptFlags ? marketConceptFlags(a) : {clean:false,result:false};
+  const flagsB=marketConceptFlags ? marketConceptFlags(b) : {clean:false,result:false};
+  if(flagsA.clean!==flagsB.clean || flagsA.result!==flagsB.result) return [false,'mercado simples vs condicionado',0];
+
+  const m=sim(a.market_norm,b.market_norm), j=jac(a.market_norm,b.market_norm), sq=seq(a.market_norm,b.market_norm);
+  const ok=(m>=0.30||j>=0.20||sq>=0.44|| (a.market_norm.includes('total')&&b.market_norm.includes('total')));
+  return [ok,`linha cruzada segura sim=${m.toFixed(2)} jac=${j.toFixed(2)}`,m];
+}
+
+function isSafeTeamUnderVsTotalOver(a,b,ao,bo){
+  if(isEachTeamThresholdMarket(a) || isEachTeamThresholdMarket(b)) return false;
+  if(a.category!==b.category || a.period!==b.period) return false;
+  if(!isSafeIntegerStatCategory(a.category)) return false;
+  if(isBadCrossPeriodMarket(a) || isBadCrossPeriodMarket(b)) return false;
+  const aD=dirLineFromOutcomeSafe(ao.out_norm), bD=dirLineFromOutcomeSafe(bo.out_norm);
+  if(!aD||!bD) return false;
+  const aTeam=!!a.team, bTeam=!!b.team;
+  if(aTeam===bTeam) return false;
+  const teamSide=aTeam?{g:a,d:aD}:{g:b,d:bD};
+  const totalSide=aTeam?{g:b,d:bD}:{g:a,d:aD};
+  // A cobertura segura aqui é: time MENOS X.5 contra total MAIS X.0.
+  // Ex.: Colômbia menos 1.5 x Total mais 1.0.
+  // Se o time fizer 2+, o total também passa de 1; se o total ficar 0/1, o time fica abaixo de 1.5.
+  if(teamSide.d.dir!=='menos' || totalSide.d.dir!=='mais') return false;
+  return Math.abs(teamSide.d.line - (totalSide.d.line + 0.5)) < 0.0001;
+}
+function findSafeCrossLineMatches(aGroups,bGroups){
+  const results=[];
+  const bIdx=makeGroupIndex(bGroups);
+  const seen=new Set();
+
+  for(const a of aGroups){
+    if(!isSafeIntegerStatCategory(a.category)) continue;
+
+    const candidates=[];
+    // Caso normal: mesmo conceito, mesma categoria, mesmo período e mesmo time/total.
+    candidates.push(...(bIdx[multiKey(a)] || []));
+
+    // Caso especial seguro: time under x total over.
+    if(a.team){
+      candidates.push(...(bIdx[multiKey(a,'total')] || []));
+    }else{
+      candidates.push(...(bIdx[multiKey(a,'teamAny')] || []));
+    }
+
+    for(const b of candidates){
+      if(!b || !isSafeIntegerStatCategory(b.category)) continue;
+      const pairId=(a.market_id||a.market_name)+'::'+(b.market_id||b.market_name);
+      const [ok,reason,conf]=marketBaseCompatibleSafeCross(a,b);
+
+      for(const ao of (a.outcomes||[])){
+        const aD=dirLineFromOutcomeSafe(ao.out_norm);
+        if(!aD) continue;
+
+        for(const bo of (b.outcomes||[])){
+          const bD=dirLineFromOutcomeSafe(bo.out_norm);
+          if(!bD) continue;
+
+          const key=pairId+'::'+(ao.selection_id||ao.out_norm)+'::'+(bo.selection_id||bo.out_norm);
+          if(seen.has(key)) continue;
+
+          if(ok && isSafeCrossLinePair(ao.out_norm,bo.out_norm)){
+            seen.add(key);
+            results.push({
+              a,b,aSel:ao,bSel:bo,
+              confidence:conf,
+              reason:`${reason}; ${ao.out_norm} x ${bo.out_norm}`
+            });
+            continue;
+          }
+
+          if(!ok && isSafeTeamUnderVsTotalOver(a,b,ao,bo)){
+            seen.add(key);
+            results.push({
+              a,b,aSel:ao,bSel:bo,
+              confidence:0.60,
+              reason:`linha cruzada segura time-under vs total-over; ${ao.out_norm} x ${bo.out_norm}`
+            });
+          }
+        }
+      }
+    }
+  }
+  return results;
+}
+function computeSafeCrossLineSurebets(match,A,B,roiMin){
+  const oddA=effOdd(match.aSel.odd,A.bonus);
+  const oddB=effOdd(match.bSel.odd,B.bonus);
+  const retorno=Math.min(A.stake*oddA,B.stake*oddB);
+  if(!(retorno>0)) return [];
+  const stakeA=retorno/oddA, stakeB=retorno/oddB;
+  const total=stakeA+stakeB, lucro=retorno-total, roi=lucro/total;
+  const nb=noBonusPairMetrics(match.aSel.odd,match.bSel.odd,A.stake,B.stake);
+  const avisoA=bonusWarningFor(A.book, match.a, match.aSel, A.bonus);
+  const avisoB=bonusWarningFor(B.book, match.b, match.bSel, B.bonus);
+  const aviso_bonus=[avisoA,avisoB].filter(Boolean).join(' | ');
+  if(!(lucro>0) || roi*100<roiMin) return [];
+  return [{
+    bookA:A.book,bookB:B.book,outA:match.aSel.out_norm,outB:match.bSel.out_norm,
+    outA_text:match.aSel.outcome,outB_text:match.bSel.outcome,
+    marketA:match.a.market_name,marketB:match.b.market_name,
+    category:match.a.category,period:match.a.period,time:match.a.team||match.b.team,
+    lineA:match.aSel.line??match.a.line,lineB:match.bSel.line??match.b.line,
+    oddA_real:match.aSel.odd,oddB_real:match.bSel.odd,
+    oddA_eff:oddA,oddB_eff:oddB,
+    stakeA,stakeB,total,retorno,lucro,roi,
+    roi_sem_bonus:nb.roi,lucro_sem_bonus:nb.lucro,total_sem_bonus:nb.total,retorno_sem_bonus:nb.retorno,
+    avisoA,avisoB,aviso_bonus,
+    confidence:match.confidence,reason:match.reason,
+    selectionA:match.aSel.selection_id,selectionB:match.bSel.selection_id
+  }];
+}
+
 function findPairMatches(aGroups,bGroups){
   const byOut={}; for(const g of bGroups.filter(twoWay)){(byOut[outcomeSet(g)] ||= []).push(g);}
   const matches=[];
@@ -2627,6 +3005,28 @@ function findPairMatches(aGroups,bGroups){
   }
   return matches;
 }
+
+function isEachTeamResultRow(r){
+  const txt = [
+    r?.marketA, r?.marketB, r?.outA, r?.outB, r?.outA_text, r?.outB_text
+  ].filter(Boolean).join(' ');
+  const x = normBasic(txt);
+  return (
+    x.includes('cada equipe') ||
+    x.includes('cada time') ||
+    x.includes('ambas equipes') ||
+    x.includes('ambas as equipes') ||
+    x.includes('ambos times') ||
+    x.includes('ambos os times') ||
+    x.includes('each team') ||
+    x.includes('both teams')
+  );
+}
+function cleanInvalidMultiResults(rows){
+  // v63: não bloqueia mercados inteiros. A equivalência é decidida no comparador.
+  return rows || [];
+}
+
 function computeTwoBetSurebets(match, A, B, roiMin){
   const aMap={}, bMap={};
   for(const o of match.a.outcomes){aMap[o.out_norm]=o;}
@@ -2666,43 +3066,83 @@ function computeTwoBetSurebets(match, A, B, roiMin){
   }
   return res;
 }
+
+
+const MULTI_RENDER_LIMIT = 150;
+function yieldUI(){
+  return new Promise(resolve => setTimeout(resolve, 0));
+}
+function multiKey(g, teamMode='auto'){
+  const team = teamMode==='total' ? '__TOTAL__' : (teamMode==='teamAny' ? '__TEAM__' : (g?.team || '__TOTAL__'));
+  return [g?.category||'', g?.period||'', team].join('|');
+}
+function makeGroupIndex(groups){
+  const idx = {};
+  for(const g of groups||[]){
+    (idx[multiKey(g)] ||= []).push(g);
+    if(g.team) (idx[multiKey(g,'teamAny')] ||= []).push(g);
+  }
+  return idx;
+}
+
+function categorySummary(groups){
+  const m={};
+  for(const g of groups||[]){
+    const k=g.category || 'sem categoria';
+    m[k]=(m[k]||0)+1;
+  }
+  return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([k,v])=>`${k}:${v}`).join(', ');
+}
 async function runMulti(){
   const logEl=document.getElementById('mLog'); logEl.textContent='Iniciando Multi Casas...';
   document.getElementById('mTbl').innerHTML=''; document.getElementById('mSummary').textContent=''; document.getElementById('mDownload').disabled=true; lastMultiRows=[];
   const filter=document.getElementById('mGameFilter').value||'';
   const roiMin=getNum('mRoiMin',0);
   const specs=[
-    {book:'Betano',file:document.getElementById('mFileBetano').files[0],stake:getNum('mStakeBetano',100),bonusPct:getNum('mBonusBetano',0)},
-    {book:'Superbet',file:document.getElementById('mFileSuperbet').files[0],stake:getNum('mStakeSuperbet',100),bonusPct:getNum('mBonusSuperbet',30)},
-    {book:'EstrelaBet',file:document.getElementById('mFileEstrelabet').files[0],stake:getNum('mStakeEstrelabet',100),bonusPct:getNum('mBonusEstrelabet',0)},
-    {book:'Bet365',file:document.getElementById('mFileBet365').files[0],stake:getNum('mStakeBet365',100),bonusPct:getNum('mBonusBet365',0)},
-    {book:'Sportingbet',file:document.getElementById('mFileSportingbet').files[0],stake:getNum('mStakeSportingbet',100),bonusPct:getNum('mBonusSportingbet',0)},
+    {book:'Betano',file:getSelectedFile('mFileBetano'),stake:getNum('mStakeBetano',100),bonusPct:getNum('mBonusBetano',0)},
+    {book:'Superbet',file:getSelectedFile('mFileSuperbet'),stake:getNum('mStakeSuperbet',100),bonusPct:getNum('mBonusSuperbet',30)},
+    {book:'EstrelaBet',file:getSelectedFile('mFileEstrelabet'),stake:getNum('mStakeEstrelabet',100),bonusPct:getNum('mBonusEstrelabet',0)},
+    {book:'Bet365',file:getSelectedFile('mFileBet365'),stake:getNum('mStakeBet365',100),bonusPct:getNum('mBonusBet365',0)},
+    {book:'Sportingbet',file:getSelectedFile('mFileSportingbet'),stake:getNum('mStakeSportingbet',100),bonusPct:getNum('mBonusSportingbet',0)},
   ];
   const loaded=[];
   for(const sp of specs){
     if(!sp.file) continue;
+    mlog(`Lendo ${sp.book}...`);
+    await yieldUI();
     const b=await extractBookUniversal(sp.book,sp.file,sp.stake,sp.bonusPct,filter);
     loaded.push(b);
     mlog(`${b.book}: ${b.groups.length} grupos/linhas; ${b.oddsN} odds; extrator ${b.mode}; arquivo ${b.file}`);
+    mlog(`${b.book} categorias: ${categorySummary(b.groups) || 'nenhuma'}`);
+    await yieldUI();
   }
   if(loaded.length<2) throw new Error('Selecione pelo menos dois arquivos/casas na aba Multi.');
   const results=[]; let matchCount=0;
   for(let i=0;i<loaded.length;i++) for(let j=i+1;j<loaded.length;j++){
     const A=loaded[i], B=loaded[j];
-    const matches=findPairMatches(A.groups,B.groups); matchCount+=matches.length;
-    mlog(`${A.book} x ${B.book}: ${matches.length} mercados de 2 saídas comparados`);
+    mlog(`Comparando ${A.book} x ${B.book}...`);
+    await yieldUI();
+    const matches=findPairMatches(A.groups,B.groups);
+    await yieldUI();
+    const cross=findSafeCrossLineMatches(A.groups,B.groups);
+    matchCount+=matches.length+cross.length;
+    mlog(`${A.book} x ${B.book}: ${matches.length} mercados padrão + ${cross.length} linhas cruzadas seguras comparadas`);
     for(const m of matches) results.push(...computeTwoBetSurebets(m,A,B,roiMin));
+    for(const m of cross) results.push(...computeSafeCrossLineSurebets(m,A,B,roiMin));
+    mlog(`${A.book} x ${B.book}: ${results.length} oportunidades acumuladas até agora`);
+    await yieldUI();
   }
   results.sort((a,b)=>b.roi-a.roi || b.lucro-a.lucro);
   mlog(`Total de matches 2-way: ${matchCount}`);
   mlog(`Surebets 2 apostas encontradas: ${results.length}`);
-  renderMulti(results);
+  if(results.length>MULTI_RENDER_LIMIT) mlog(`Modo desempenho: exibindo as ${MULTI_RENDER_LIMIT} melhores na tela. Use ROI mínimo/filtro do jogo para reduzir ou baixar uma lista menor.`);
+  renderMulti(results.slice(0, MULTI_RENDER_LIMIT), results.length);
 }
-function renderMulti(results){
+function renderMulti(results,totalFound=results.length){
   const flat=[]; let rank=1;
   for(const r of results){
-    const card1=betCardHtml('Aposta 1',r.bookA,r.stakeA,r.outA,r.oddA_real,r.oddA_eff,r.marketA,r.lineA,r.period,r.time,r.avisoA||'');
-    const card2=betCardHtml('Aposta 2',r.bookB,r.stakeB,r.outB,r.oddB_real,r.oddB_eff,r.marketB,r.lineB,r.period,r.time,r.avisoB||'');
+    const card1=betCardHtml('Aposta 1',r.bookA,r.stakeA,r.outA_text||r.outA,r.oddA_real,r.oddA_eff,r.marketA,r.lineA,r.period,r.time,r.avisoA||'');
+    const card2=betCardHtml('Aposta 2',r.bookB,r.stakeB,r.outB_text||r.outB,r.oddB_real,r.oddB_eff,r.marketB,r.lineB,r.period,r.time,r.avisoB||'');
     flat.push({
       Rank:rank++,
       'ROI com bônus %':r.roi*100,
@@ -2716,8 +3156,8 @@ function renderMulti(results){
       'Apostas':cardsHtml([card1,card2]),
       'Aviso bônus':r.aviso_bonus||'',
       'Resumo':`Com bônus: lucro ${money(r.lucro)} (${dec(r.roi*100)}%). Sem bônus: lucro ${money(r.lucro_sem_bonus)} (${dec(r.roi_sem_bonus*100)}%).`,
-      'Aposta 1 texto':betPlain(r.bookA,r.stakeA,r.outA,r.oddA_real,r.oddA_eff,r.marketA,r.lineA,r.period,r.time),
-      'Aposta 2 texto':betPlain(r.bookB,r.stakeB,r.outB,r.oddB_real,r.oddB_eff,r.marketB,r.lineB,r.period,r.time),
+      'Aposta 1 texto':betPlain(r.bookA,r.stakeA,r.outA_text||r.outA,r.oddA_real,r.oddA_eff,r.marketA,r.lineA,r.period,r.time),
+      'Aposta 2 texto':betPlain(r.bookB,r.stakeB,r.outB_text||r.outB,r.oddB_real,r.oddB_eff,r.marketB,r.lineB,r.period,r.time),
       'Casa A':r.bookA, 'Aposta A':niceOutcome(r.outA), 'Odd A real':r.oddA_real, 'Odd A usada':r.oddA_eff, 'Stake A R$':r.stakeA,
       'Casa B':r.bookB, 'Aposta B':niceOutcome(r.outB), 'Odd B real':r.oddB_real, 'Odd B usada':r.oddB_eff, 'Stake B R$':r.stakeB,
       'Mercado A':r.marketA, 'Mercado B':r.marketB, 'Linha A':r.lineA??'', 'Linha B':r.lineB??'', 'Periodo':r.period, 'Categoria':r.category, 'Time':r.time||'', 'Confianca':r.confidence, 'Motivo':r.reason
@@ -2725,7 +3165,8 @@ function renderMulti(results){
   }
   window.__lozzyStores.multi=flat; lastMultiRows=flat.map(r=>{const x={...r}; delete x['Apostas']; return x;});
   document.getElementById('mDownload').disabled=flat.length===0;
-  document.getElementById('mSummary').innerHTML = flat.length ? `<span class="ok">${flat.length} surebets de 2 apostas encontradas.</span> Melhor com bônus: <b>${dec(flat[0]['ROI com bônus %'])}%</b>; sem bônus: <b>${dec(flat[0]['ROI sem bônus %'])}%</b>.` : `<span class="warn">Nenhuma surebet de 2 apostas encontrada. Confira no log se os arquivos extraíram grupos/linhas.</span>`;
+  const displayInfo = totalFound>flat.length ? ` Mostrando as ${flat.length} melhores na tela.` : '';
+  document.getElementById('mSummary').innerHTML = flat.length ? `<span class="ok">${totalFound} surebets de 2 apostas encontradas.</span>${displayInfo} Melhor com bônus: <b>${dec(flat[0]['ROI com bônus %'])}%</b>; sem bônus: <b>${dec(flat[0]['ROI sem bônus %'])}%</b>.` : `<span class="warn">Nenhuma surebet de 2 apostas encontrada. Confira no log se os arquivos extraíram grupos/linhas.</span>`;
   const cols=['Rank','ROI com bônus %','ROI sem bônus %','Lucro com bônus R$','Lucro sem bônus R$','Apostar Casa A R$','Apostar Casa B R$','Total apostado R$','Retorno R$','Apostas','Ações','Aviso bônus','Resumo','Mercado A','Mercado B','Periodo','Categoria','Time'];
   document.getElementById('mTbl').innerHTML='<thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+flat.slice(0,500).map((r,i)=>'<tr>'+cols.map(c=>`<td>${c==='Ações'?actionButtons('multi',i):fmtTable(c,r[c])}${c==='Aviso bônus'&&r[c]?warningHtml(r[c]):''}</td>`).join('')+'</tr>').join('')+'</tbody>';
 }
@@ -2979,7 +3420,7 @@ async function runDuploGreen(){
   document.getElementById('dgTbl').innerHTML=''; document.getElementById('dgSummary').textContent=''; document.getElementById('dgDownload').disabled=true; lastDgRows=[];
   const filter=document.getElementById('dgGameFilter').value||'';
   const roiMin=getNum('dgRoiMin',0);
-  const specs=[1,2,3,4].map(i=>({label:`Casa ${i}`, file:document.getElementById(`dgFile${i}`).files[0], stake:getNum(`dgStake${i}`,100), bonusPct:getNum(`dgBonus${i}`,0)}));
+  const specs=[1,2,3,4].map(i=>({label:`Casa ${i}`, file:getSelectedFile(`dgFile${i}`), stake:getNum(`dgStake${i}`,100), bonusPct:getNum(`dgBonus${i}`,0)}));
   const loaded=[];
   for(const sp of specs){
     if(!sp.file) continue;
@@ -3060,11 +3501,11 @@ function catLog(prefix,s){
 }
 function categorySpecs(prefix){
   return [
-    {book:'Betano',file:document.getElementById(prefix+'FileBetano').files[0],stake:getNum(prefix+'StakeBetano',100),bonusPct:getNum(prefix+'BonusBetano',0)},
-    {book:'Superbet',file:document.getElementById(prefix+'FileSuperbet').files[0],stake:getNum(prefix+'StakeSuperbet',100),bonusPct:getNum(prefix+'BonusSuperbet',30)},
-    {book:'EstrelaBet',file:document.getElementById(prefix+'FileEstrelabet').files[0],stake:getNum(prefix+'StakeEstrelabet',100),bonusPct:getNum(prefix+'BonusEstrelabet',0)},
-    {book:'Bet365',file:document.getElementById(prefix+'FileBet365').files[0],stake:getNum(prefix+'StakeBet365',100),bonusPct:getNum(prefix+'BonusBet365',0)},
-    {book:'Sportingbet',file:document.getElementById(prefix+'FileSportingbet').files[0],stake:getNum(prefix+'StakeSportingbet',100),bonusPct:getNum(prefix+'BonusSportingbet',0)},
+    {book:'Betano',file:getSelectedFile(prefix+'FileBetano'),stake:getNum(prefix+'StakeBetano',100),bonusPct:getNum(prefix+'BonusBetano',0)},
+    {book:'Superbet',file:getSelectedFile(prefix+'FileSuperbet'),stake:getNum(prefix+'StakeSuperbet',100),bonusPct:getNum(prefix+'BonusSuperbet',30)},
+    {book:'EstrelaBet',file:getSelectedFile(prefix+'FileEstrelabet'),stake:getNum(prefix+'StakeEstrelabet',100),bonusPct:getNum(prefix+'BonusEstrelabet',0)},
+    {book:'Bet365',file:getSelectedFile(prefix+'FileBet365'),stake:getNum(prefix+'StakeBet365',100),bonusPct:getNum(prefix+'BonusBet365',0)},
+    {book:'Sportingbet',file:getSelectedFile(prefix+'FileSportingbet'),stake:getNum(prefix+'StakeSportingbet',100),bonusPct:getNum(prefix+'BonusSportingbet',0)},
   ];
 }
 async function runCategoryMarket(prefix,key,title){
@@ -3102,8 +3543,8 @@ async function runCategoryMarket(prefix,key,title){
 function renderCategoryMarket(prefix,results,title){
   const flat=[]; let rank=1;
   for(const r of results){
-    const card1=betCardHtml('Aposta 1',r.bookA,r.stakeA,r.outA,r.oddA_real,r.oddA_eff,r.marketA,r.lineA,r.period,r.time,r.avisoA||'');
-    const card2=betCardHtml('Aposta 2',r.bookB,r.stakeB,r.outB,r.oddB_real,r.oddB_eff,r.marketB,r.lineB,r.period,r.time,r.avisoB||'');
+    const card1=betCardHtml('Aposta 1',r.bookA,r.stakeA,r.outA_text||r.outA,r.oddA_real,r.oddA_eff,r.marketA,r.lineA,r.period,r.time,r.avisoA||'');
+    const card2=betCardHtml('Aposta 2',r.bookB,r.stakeB,r.outB_text||r.outB,r.oddB_real,r.oddB_eff,r.marketB,r.lineB,r.period,r.time,r.avisoB||'');
     flat.push({
       Rank:rank++,
       'ROI com bônus %':r.roi*100,
@@ -3117,8 +3558,8 @@ function renderCategoryMarket(prefix,results,title){
       'Apostas':cardsHtml([card1,card2]),
       'Aviso bônus':r.aviso_bonus||'',
       'Resumo':`Com bônus: lucro ${money(r.lucro)} (${dec(r.roi*100)}%). Sem bônus: lucro ${money(r.lucro_sem_bonus)} (${dec(r.roi_sem_bonus*100)}%).`,
-      'Aposta 1 texto':betPlain(r.bookA,r.stakeA,r.outA,r.oddA_real,r.oddA_eff,r.marketA,r.lineA,r.period,r.time),
-      'Aposta 2 texto':betPlain(r.bookB,r.stakeB,r.outB,r.oddB_real,r.oddB_eff,r.marketB,r.lineB,r.period,r.time),
+      'Aposta 1 texto':betPlain(r.bookA,r.stakeA,r.outA_text||r.outA,r.oddA_real,r.oddA_eff,r.marketA,r.lineA,r.period,r.time),
+      'Aposta 2 texto':betPlain(r.bookB,r.stakeB,r.outB_text||r.outB,r.oddB_real,r.oddB_eff,r.marketB,r.lineB,r.period,r.time),
       'Casa A':r.bookA, 'Aposta A':niceOutcome(r.outA), 'Odd A real':r.oddA_real, 'Odd A usada':r.oddA_eff, 'Stake A R$':r.stakeA,
       'Casa B':r.bookB, 'Aposta B':niceOutcome(r.outB), 'Odd B real':r.oddB_real, 'Odd B usada':r.oddB_eff, 'Stake B R$':r.stakeB,
       'Mercado A':r.marketA, 'Mercado B':r.marketB, 'Linha A':r.lineA??'', 'Linha B':r.lineB??'', 'Periodo':r.period, 'Categoria':r.category, 'Time':r.time||'', 'Confianca':r.confidence, 'Motivo':r.reason
@@ -3145,16 +3586,28 @@ setupCategoryTab('catRes','resultado','Resultado','surebets_resultado_mercado.xl
 
 
 // ===== Sincronizar uploads entre abas =====
-// Quando o usuário seleciona um arquivo de uma casa em qualquer aba,
-// o app copia esse mesmo arquivo para os inputs da mesma casa nas outras abas.
-// Isso evita ter que escolher Betano/Superbet/Bet365 etc em cada guia separada.
+// Sincronização real por casa:
+// 1) Inputs nomeados (Betano/Superbet/etc.) usam o arquivo salvo em memória.
+// 2) Betano x Superbet usa os mesmos arquivos do Multi/Categorias.
+// 3) Duplo Green recebe automaticamente os arquivos já enviados, em ordem de casas.
+window.__lozzyFileStore = window.__lozzyFileStore || {};
+window.__lozzyFileOrder = window.__lozzyFileOrder || [];
 const BOOK_FILE_PATTERNS=[
-  {book:'Betano', pattern:/filebetano$/i},
-  {book:'Superbet', pattern:/filesuperbet$/i},
-  {book:'EstrelaBet', pattern:/fileestrelabet$/i},
-  {book:'Bet365', pattern:/filebet365$/i},
-  {book:'Sportingbet', pattern:/filesportingbet$/i}
+  {book:'Betano', pattern:/^(betano|.*filebetano)$/i},
+  {book:'Superbet', pattern:/^(superbet|.*filesuperbet)$/i},
+  {book:'EstrelaBet', pattern:/^(estrelabet|.*fileestrelabet)$/i},
+  {book:'Bet365', pattern:/^(bet365|.*filebet365)$/i},
+  {book:'Sportingbet', pattern:/^(sportingbet|.*filesportingbet)$/i}
 ];
+const BOOK_NAME_PATTERNS=[
+  {book:'Betano', pattern:/betano/i},
+  {book:'Superbet', pattern:/superbet/i},
+  {book:'EstrelaBet', pattern:/estrela\s*bet|estrelabet/i},
+  {book:'Bet365', pattern:/bet365/i},
+  {book:'Sportingbet', pattern:/sportingbet|sporting/i}
+];
+const BOOK_ORDER=['Betano','Superbet','EstrelaBet','Bet365','Sportingbet'];
+
 function detectBookFromInputId(id){
   const s=String(id||'');
   for(const b of BOOK_FILE_PATTERNS){
@@ -3162,12 +3615,45 @@ function detectBookFromInputId(id){
   }
   return '';
 }
+function detectBookFromFileName(name){
+  const s=String(name||'');
+  for(const b of BOOK_NAME_PATTERNS){
+    if(b.pattern.test(s)) return b.book;
+  }
+  return '';
+}
+function rememberBookFile(book,file){
+  if(!book || !file) return;
+  window.__lozzyFileStore[book]=file;
+  window.__lozzyFileOrder = window.__lozzyFileOrder.filter(b=>b!==book);
+  window.__lozzyFileOrder.push(book);
+}
+function getDgBookByIndex(n){
+  const uploaded=window.__lozzyFileOrder.filter(b=>window.__lozzyFileStore[b]);
+  if(uploaded[n-1]) return uploaded[n-1];
+  const fallback=BOOK_ORDER.filter(b=>window.__lozzyFileStore[b]);
+  return fallback[n-1] || '';
+}
+function getSelectedFile(inputId){
+  const el=document.getElementById(inputId);
+  if(el && el.files && el.files[0]) return el.files[0];
+
+  const directBook=detectBookFromInputId(inputId);
+  if(directBook) return window.__lozzyFileStore[directBook] || null;
+
+  const dg=String(inputId||'').match(/^dgFile(\d+)$/);
+  if(dg){
+    const book=getDgBookByIndex(Number(dg[1]));
+    return book ? (window.__lozzyFileStore[book] || null) : null;
+  }
+  return null;
+}
 function fileListFromFiles(files){
   const dt=new DataTransfer();
   Array.from(files||[]).forEach(f=>dt.items.add(f));
   return dt.files;
 }
-function addSyncBadge(input, fileName){
+function addSyncBadge(input, label){
   const wrap=input.closest('div') || input.parentElement;
   if(!wrap) return;
   let badge=wrap.querySelector('.syncNote');
@@ -3176,25 +3662,43 @@ function addSyncBadge(input, fileName){
     badge.className='syncNote';
     wrap.appendChild(badge);
   }
-  badge.textContent=fileName ? 'sincronizado: '+String(fileName).slice(0,28) : '';
+  badge.textContent=label ? 'sincronizado: '+String(label).slice(0,34) : '';
+}
+function namedInputSelectorForBook(book){
+  if(book==='Betano') return 'input[type="file"]#betano, input[type="file"][id$="FileBetano"]';
+  if(book==='Superbet') return 'input[type="file"]#superbet, input[type="file"][id$="FileSuperbet"]';
+  return 'input[type="file"][id$="File'+book+'"]';
+}
+function refreshNamedInputsForBook(book,file){
+  const fileName=file?.name||book;
+  document.querySelectorAll(namedInputSelectorForBook(book)).forEach(inp=>{
+    try{
+      if(file && (!inp.files || !inp.files[0])) inp.files=fileListFromFiles([file]);
+    }catch(e){}
+    addSyncBadge(inp,fileName);
+    inp.dispatchEvent(new Event('lozzy-sync',{bubbles:true}));
+  });
+}
+function refreshDgBadges(){
+  for(let i=1;i<=4;i++){
+    const inp=document.getElementById(`dgFile${i}`);
+    if(!inp) continue;
+    const book=getDgBookByIndex(i);
+    const file=book ? window.__lozzyFileStore[book] : null;
+    if(file) addSyncBadge(inp,`${book} • ${file.name}`);
+  }
 }
 function syncFileToSameBookInputs(source){
-  const book=detectBookFromInputId(source.id);
-  if(!book || !source.files || !source.files.length) return;
-  const files=source.files;
-  const fileName=files[0]?.name||'arquivo';
-  const selector='input[type="file"][id$="File'+book+'"]';
-  document.querySelectorAll(selector).forEach(inp=>{
-    if(inp===source) { addSyncBadge(inp,fileName); return; }
-    try{
-      inp.files=fileListFromFiles(files);
-      addSyncBadge(inp,fileName);
-      inp.dispatchEvent(new Event('lozzy-sync',{bubbles:true}));
-    }catch(e){
-      // Alguns navegadores antigos podem bloquear atribuição programática.
-      // Nesse caso o input original continua funcionando normalmente.
-    }
-  });
+  if(!source.files || !source.files.length) return;
+  const file=source.files[0];
+  const book=detectBookFromInputId(source.id) || detectBookFromFileName(file.name);
+  if(!book){
+    addSyncBadge(source,file.name);
+    return;
+  }
+  rememberBookFile(book,file);
+  refreshNamedInputsForBook(book,file);
+  refreshDgBadges();
 }
 function setupFileUploadSync(){
   document.querySelectorAll('input[type="file"]').forEach(inp=>{
@@ -3202,9 +3706,12 @@ function setupFileUploadSync(){
     inp.dataset.lozzySync='1';
     inp.addEventListener('change',()=>syncFileToSameBookInputs(inp));
   });
+  // Se algum input já veio preenchido pelo navegador, salva também.
+  document.querySelectorAll('input[type="file"]').forEach(inp=>{
+    if(inp.files && inp.files[0]) syncFileToSameBookInputs(inp);
+  });
 }
 document.addEventListener('DOMContentLoaded',setupFileUploadSync);
-
 
 // ===== Calculadora manual =====
 function calcManualSurebet(){
