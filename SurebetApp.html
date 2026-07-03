@@ -367,6 +367,46 @@
     .calcbox{border:1px solid rgba(34,197,94,.35);border-radius:16px;padding:14px;background:rgba(34,197,94,.06);margin-top:12px}
     .badbox{border:1px solid rgba(239,68,68,.45);border-radius:16px;padding:14px;background:rgba(239,68,68,.08);margin-top:12px}
     .miniChart{width:100%;height:300px;border:1px solid var(--line);border-radius:16px;background:rgba(2,6,23,.45);margin-top:12px}
+    .chartgrid{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:14px;margin-top:12px}
+    .chartbox{border:1px solid var(--line);border-radius:20px;background:rgba(2,6,23,.45);padding:12px}
+    .chartbox canvas{width:100%;height:330px;display:block}
+    @media(max-width:1100px){.chartgrid{grid-template-columns:1fr}.chartbox canvas{height:300px}}
+    .rowactions{display:flex;gap:8px;flex-wrap:wrap;min-width:210px}
+    .rowactions button{width:auto;padding:8px 10px;border-radius:10px;font-size:12px}
+    .moneyedit{
+      width:110px;
+      min-height:34px;
+      padding:6px 8px;
+      border-radius:10px;
+      border:1px solid rgba(148,163,184,.35);
+      background:rgba(2,6,23,.65);
+      color:var(--text);
+      font-weight:800;
+    }
+    .moneyedit:focus{outline:2px solid rgba(34,197,94,.45);border-color:rgba(34,197,94,.75)}
+    .houseedit{display:flex;flex-direction:column;gap:5px;min-width:135px}
+    .houseedit b{font-size:12px;color:#e5e7eb}
+    .houseedit small{color:var(--muted);font-size:11px}
+    .conditionalBlock{display:contents}
+    .modalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.58);display:flex;align-items:center;justify-content:center;z-index:9999}
+    .modalBox{width:min(460px,92vw);border:1px solid var(--line);border-radius:20px;background:#0f172a;padding:18px;box-shadow:0 28px 80px rgba(0,0,0,.45)}
+    .modalBox h3{margin:0 0 8px}
+    .modalActions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    .winbtn{background:linear-gradient(135deg,#22c55e,#16a34a)!important;color:#02140a!important}
+    .losebtn{background:linear-gradient(135deg,#ef4444,#b91c1c)!important;color:white!important}
+    .readonlyBox{
+      min-height:44px;
+      padding:12px 14px;
+      border:1px solid rgba(148,163,184,.35);
+      border-radius:12px;
+      background:rgba(2,6,23,.40);
+      color:var(--text);
+      font-weight:900;
+      display:flex;
+      align-items:center;
+    }
+    .copybtn{background:linear-gradient(135deg,#38bdf8,#2563eb)!important;color:white!important}
+    .histbtn{background:linear-gradient(135deg,#22c55e,#16a34a)!important;color:#02140a!important}
     @media(max-width:720px){
       .installbar{flex-direction:column;align-items:stretch}
       .installbar button{width:100%}
@@ -676,11 +716,11 @@
 
   <section id="tab-perfil" class="tab">
     <div class="card">
-      <div class="muted small"><span class="pill">Perfil</span> Salve sua banca inicial, registre apostas feitas e acompanhe lucro/prejuízo e ROI. Os dados ficam salvos apenas no navegador deste dispositivo.</div>
+      <div class="muted small"><span class="pill">Perfil</span> Salve sua banca inicial, registre apostas feitas e a banca atual será recalculada automaticamente conforme ganhos e perdas. Os dados ficam salvos apenas no navegador deste dispositivo.</div>
       <div class="grid" style="margin-top:12px">
         <div><label>Nome do perfil</label><input id="perfilNome" placeholder="ex.: João" /></div>
         <div><label>Banca inicial (R$)</label><input id="perfilBancaInicial" type="number" step="0.01" value="0" /></div>
-        <div><label>Banca atual manual (opcional)</label><input id="perfilBancaAtual" type="number" step="0.01" value="" placeholder="opcional" /></div>
+        <div><label>Banca atual automática</label><input id="perfilBancaAtual" type="number" step="0.01" value="" placeholder="calculada automaticamente" readonly /></div>
       </div>
       <div class="btnrow" style="margin-top:12px">
         <button id="perfilSalvar">Salvar perfil</button>
@@ -693,20 +733,36 @@
       <div class="grid" style="margin-top:12px">
         <div><label>Data</label><input id="apostaData" type="date" /></div>
         <div><label>Mercado / descrição</label><input id="apostaDesc" placeholder="ex.: Escanteios Portugal 1T" /></div>
-        <div><label>Total apostado (R$)</label><input id="apostaStake" type="number" step="0.01" value="0" /></div>
-        <div><label>Retorno recebido (R$)</label><input id="apostaRetorno" type="number" step="0.01" value="0" /></div>
         <div><label>Tipo</label>
           <select id="apostaTipo">
+            <option>Manual</option>
             <option>Surebet</option>
             <option>Duplo Green</option>
-            <option>Manual</option>
             <option>Outro</option>
           </select>
         </div>
+
+        <div id="manualSingleFields" class="conditionalBlock">
+          <div><label>Casa de aposta</label><input id="apostaCasaUnica" placeholder="ex.: Betano" /></div>
+          <div><label>Valor apostado (R$)</label><input id="apostaValorUnico" type="number" step="0.01" value="0" /></div>
+          <div><label>Odd</label><input id="apostaOddUnica" type="number" step="0.001" value="0" /></div>
+          <div><label>Retorno</label><div id="apostaRetornoAuto" class="readonlyBox">R$ 0,00</div></div>
+        </div>
+
+        <div id="surebetDoubleFields" class="conditionalBlock" style="display:none">
+          <div><label>Casa A</label><input id="apostaCasaA" placeholder="ex.: Betano" /></div>
+          <div><label>Valor disponível Casa A (R$)</label><input id="apostaStakeA" type="number" step="0.01" value="0" /></div>
+          <div><label>Odd Casa A</label><input id="apostaOddA" type="number" step="0.001" value="0" /></div>
+          <div><label>Casa B</label><input id="apostaCasaB" placeholder="ex.: Superbet" /></div>
+          <div><label>Valor disponível Casa B (R$)</label><input id="apostaStakeB" type="number" step="0.01" value="0" /></div>
+          <div><label>Odd Casa B</label><input id="apostaOddB" type="number" step="0.001" value="0" /></div>
+        </div>
+
         <div><label>Status</label>
           <select id="apostaStatus">
-            <option>Finalizada</option>
-            <option>Pendente</option>
+            <option>Aberta</option>
+            <option>Ganha</option>
+            <option>Perdida</option>
           </select>
         </div>
       </div>
@@ -716,7 +772,11 @@
     <div class="card">
       <b>Resumo do perfil</b>
       <div id="perfilResumo" class="kpis"></div>
-      <canvas id="perfilChart" class="miniChart"></canvas>
+      <div class="chartgrid">
+        <div class="chartbox"><b>Lucro acumulado</b><canvas id="perfilChart"></canvas></div>
+        <div class="chartbox"><b>Lucro por casa</b><canvas id="perfilChartCasa"></canvas></div>
+        <div class="chartbox"><b>Lucro por tipo</b><canvas id="perfilChartTipo"></canvas></div>
+      </div>
     </div>
 
     <div class="card">
@@ -1909,6 +1969,162 @@ async function run(){
   const results=[]; for(const m of matches){const r=computeWithStakeLimits(m,stakeSuper,stakeBetano,bonus,roiMin); if(r) results.push(r);} results.sort((a,b)=>b.roi-a.roi || b.lucro-a.lucro);
   log(`Surebets encontradas: ${results.length}`); render(results, B, S, matches);
 }
+
+// ===== Ações rápidas: copiar e adicionar ao histórico =====
+window.__lozzyStores = window.__lozzyStores || {};
+function cleanTextForCopy(v){
+  return String(v??'').replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ').replace(/\s+\n/g,'\n').replace(/\n\s+/g,'\n').replace(/[ \t]+/g,' ').trim();
+}
+function rowCopyText(r){
+  const lines=[];
+  lines.push(`Surebet LOZZY — #${r.Rank||''}`);
+  if(r['ROI com bônus %']!==undefined) lines.push(`ROI com bônus: ${dec(r['ROI com bônus %'])}%`);
+  if(r['ROI sem bônus %']!==undefined) lines.push(`ROI sem bônus: ${dec(r['ROI sem bônus %'])}%`);
+  if(r['Lucro com bônus R$']!==undefined) lines.push(`Lucro com bônus: ${money(r['Lucro com bônus R$'])}`);
+  if(r['Lucro sem bônus R$']!==undefined) lines.push(`Lucro sem bônus: ${money(r['Lucro sem bônus R$'])}`);
+  if(r['Total apostado R$']!==undefined) lines.push(`Total apostado: ${money(r['Total apostado R$'])}`);
+  if(r['Retorno R$']!==undefined) lines.push(`Retorno: ${money(r['Retorno R$'])}`);
+  if(r['Retorno por green R$']!==undefined) lines.push(`Retorno por green: ${money(r['Retorno por green R$'])}`);
+  lines.push('');
+  ['Aposta 1 texto','Aposta 2 texto','Aposta 3 texto','Aposta 4 texto'].forEach((k,i)=>{
+    if(r[k]) lines.push(`Aposta ${i+1}: ${cleanTextForCopy(r[k])}`);
+  });
+  const mercados=[r['Mercado A'],r['Mercado B'],r['Mercado Betano'],r['Mercado Superbet']].filter(Boolean);
+  if(mercados.length){lines.push(''); lines.push('Mercados: '+mercados.join(' | '));}
+  if(r['Aviso bônus']){lines.push(''); lines.push('Aviso: '+cleanTextForCopy(r['Aviso bônus']));}
+  return lines.join('\n');
+}
+async function copyOpportunity(store, idx){
+  const r=(window.__lozzyStores?.[store]||[])[idx];
+  if(!r) return;
+  const text=rowCopyText(r);
+  try{
+    await navigator.clipboard.writeText(text);
+    alert('Aposta copiada.');
+  }catch(e){
+    const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); alert('Aposta copiada.');
+  }
+}
+function rowDescForHistory(r){
+  return [r['Mercado A'],r['Mercado B'],r['Mercado Betano'],r['Mercado Superbet'],r['Quando dá duplo green']].filter(Boolean).join(' | ') || `Oportunidade #${r.Rank||''}`;
+}
+function rowBookSummary(r){
+  return [r['Casa A'],r['Casa B']].filter(Boolean).join(' x ') || (r['Mercado Betano']&&r['Mercado Superbet']?'Betano x Superbet':'');
+}
+function historyHouseData(r){
+  const retorno=Number(r['Retorno R$']||r['Retorno por green R$']||0);
+  let casaA=r['Casa A']||'';
+  let casaB=r['Casa B']||'';
+  let stakeA=Number(r['Stake A R$']||r['Apostar Casa A R$']||0);
+  let stakeB=Number(r['Stake B R$']||r['Apostar Casa B R$']||0);
+  let oddA=Number(r['Odd A usada']||0);
+  let oddB=Number(r['Odd B usada']||0);
+
+  // Aba Betano x Superbet
+  if(!casaA && r['Apostar na Superbet R$']!==undefined){
+    casaA='Superbet';
+    stakeA=Number(r['Apostar na Superbet R$']||0);
+  }
+  if(!casaB && r['Apostar na Betano R$']!==undefined){
+    casaB='Betano';
+    stakeB=Number(r['Apostar na Betano R$']||0);
+  }
+
+  // Fallback: calcula odds usadas pela proporção do retorno.
+  if(!(oddA>0) && stakeA>0 && retorno>0) oddA=retorno/stakeA;
+  if(!(oddB>0) && stakeB>0 && retorno>0) oddB=retorno/stakeB;
+
+  const total=Number(r['Total apostado R$']||0);
+  if(!(stakeA>0) && total>0) stakeA=total;
+  if(!(stakeB>0)) stakeB=0;
+  if(!casaA) casaA='Casa A';
+  if(!casaB && stakeB>0) casaB='Casa B';
+  if(!casaB) casaB='';
+
+  return {casaA,casaB,stakeA,stakeB,oddA,oddB};
+}
+function recalcHistoryBet(a){
+  // stakeA/stakeB = valor disponível para apostar em cada casa.
+  // recStakeA/recStakeB = valor recomendado para fazer a surebet.
+  const dispA=Number(a.stakeA)||0;
+  const dispB=Number(a.stakeB)||0;
+  const oddA=Number(a.oddA)||0;
+  const oddB=Number(a.oddB)||0;
+  const status=normPerfilStatus(a);
+  const isLost=status==='Perdida';
+
+  if(dispB>0 && oddA>0 && oddB>0){
+    const retornoPossivel=Math.min(dispA*oddA, dispB*oddB);
+    a.recStakeA=retornoPossivel/oddA;
+    a.recStakeB=retornoPossivel/oddB;
+    a.stake=a.recStakeA+a.recStakeB;
+    a.retorno=isLost ? 0 : retornoPossivel;
+  }else{
+    const disp=dispA;
+    let rate=Number(a.retornoRate);
+    if(!(rate>0)) rate=Number(a.oddA)||1;
+    a.recStakeA=disp;
+    a.recStakeB=0;
+    a.stake=disp;
+    a.retorno=isLost ? 0 : disp*rate;
+  }
+  return a;
+}
+function addOpportunityToHistory(store, idx){
+  const r=(window.__lozzyStores?.[store]||[])[idx];
+  if(!r) return;
+  const p=loadPerfil();
+  const total=Number(r['Total apostado R$']||0);
+  const retorno=Number(r['Retorno R$']||r['Retorno por green R$']||0);
+  const h=historyHouseData(r);
+  const aposta={
+    data:new Date().toISOString().slice(0,10),
+    desc:rowDescForHistory(r),
+    stake:total,
+    retorno:retorno,
+    tipo:r.Tipo || 'Surebet',
+    status:'Pendente',
+    casas:rowBookSummary(r),
+    casaA:h.casaA,
+    casaB:h.casaB,
+    stakeA:h.stakeA,
+    stakeB:h.stakeB,
+    recStakeA:h.stakeA,
+    recStakeB:h.stakeB,
+    oddA:h.oddA,
+    oddB:h.oddB,
+    categoria:r.Categoria||'',
+    mercadoA:r['Mercado A']||r['Mercado Betano']||'',
+    mercadoB:r['Mercado B']||r['Mercado Superbet']||'',
+    roi:Number(r['ROI com bônus %']||r['ROI %']||0),
+    retornoRate: total>0 ? retorno/total : 1,
+    origem:'Resultado do app'
+  };
+  recalcHistoryBet(aposta);
+  if(aposta.status==='Aberta'){
+      // aberta: mantém retorno potencial, mas não entra nos ganhos/perdas até finalizar.
+    }else if(aposta.status==='Ganha'){
+      aposta.resultado='Ganha';
+      if(!isDoubleHistoryBet(aposta)){
+        const stake=Number(aposta.stake)||0;
+        let rate=Number(aposta.retornoRate);
+        if(!(rate>0)) rate=Number(aposta.oddA)||0;
+        if(!(rate>0)) rate=1;
+        aposta.retorno=stake*rate;
+      }
+    }else if(aposta.status==='Perdida'){
+      aposta.resultado='Perdida';
+      if(!isDoubleHistoryBet(aposta)) aposta.retorno=0;
+    }
+    p.apostas.push(aposta);
+  savePerfil(p);
+  renderPerfil();
+  alert('Adicionado ao histórico como Pendente. No Perfil, ajuste o valor disponível em cada casa se quiser.');
+}
+function actionButtons(store, idx){
+  return `<div class="rowactions"><button class="copybtn" onclick="copyOpportunity('${store}',${idx})">Copiar</button><button class="histbtn" onclick="addOpportunityToHistory('${store}',${idx})">Adicionar ao histórico</button></div>`;
+}
+
 function render(results,B,S,matches){
   const flat=[]; let rank=1;
   for(const r of results){
@@ -1950,11 +2166,11 @@ function render(results,B,S,matches){
       'Motivo':r.reason
     });
   }
-  lastRows=flat.map(r=>{const x={...r}; delete x['Apostas']; return x;});
+  window.__lozzyStores.main=flat; lastRows=flat.map(r=>{const x={...r}; delete x['Apostas']; return x;});
   document.getElementById('download').disabled=flat.length===0;
   document.getElementById('summary').innerHTML = flat.length ? `<span class="ok">${flat.length} surebets encontradas.</span> Melhor com bônus: <b>${dec(flat[0]['ROI com bônus %'])}%</b>; sem bônus: <b>${dec(flat[0]['ROI sem bônus %'])}%</b>. Lucro com bônus <b>${money(flat[0]['Lucro com bônus R$'])}</b>.` : `<span class="warn">Nenhuma surebet encontrada. Veja o log: se as extrações deram 0 ou poucos grupos, o arquivo não contém as APIs corretas.</span>`;
-  const cols=['Rank','ROI com bônus %','ROI sem bônus %','Lucro com bônus R$','Lucro sem bônus R$','Apostar na Superbet R$','Apostar na Betano R$','Total apostado R$','Retorno R$','Apostas','Aviso bônus','Resumo','Mercado Betano','Mercado Superbet','Bônus aplicado em'];
-  tbl.innerHTML='<thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+flat.slice(0,300).map(r=>'<tr>'+cols.map(c=>`<td>${fmtTable(c,r[c])}${c==='Aviso bônus'&&r[c]?warningHtml(r[c]):''}</td>`).join('')+'</tr>').join('')+'</tbody>';
+  const cols=['Rank','ROI com bônus %','ROI sem bônus %','Lucro com bônus R$','Lucro sem bônus R$','Apostar na Superbet R$','Apostar na Betano R$','Total apostado R$','Retorno R$','Apostas','Ações','Aviso bônus','Resumo','Mercado Betano','Mercado Superbet','Bônus aplicado em'];
+  tbl.innerHTML='<thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+flat.slice(0,300).map((r,i)=>'<tr>'+cols.map(c=>`<td>${c==='Ações'?actionButtons('main',i):fmtTable(c,r[c])}${c==='Aviso bônus'&&r[c]?warningHtml(r[c]):''}</td>`).join('')+'</tr>').join('')+'</tbody>';
 }
 document.getElementById('run').onclick=()=>run().catch(e=>{log('ERRO: '+e.message); document.getElementById('summary').innerHTML='<span class="err">'+e.message+'</span>';});
 document.getElementById('download').onclick=()=>{ if(!lastRows.length) return; exportPrettyWorkbook(lastRows,'surebets_resultado.xlsx','Surebets Betano x Superbet'); };
@@ -2499,11 +2715,11 @@ function renderMulti(results){
       'Mercado A':r.marketA, 'Mercado B':r.marketB, 'Linha A':r.lineA??'', 'Linha B':r.lineB??'', 'Periodo':r.period, 'Categoria':r.category, 'Time':r.time||'', 'Confianca':r.confidence, 'Motivo':r.reason
     });
   }
-  lastMultiRows=flat.map(r=>{const x={...r}; delete x['Apostas']; return x;});
+  window.__lozzyStores.multi=flat; lastMultiRows=flat.map(r=>{const x={...r}; delete x['Apostas']; return x;});
   document.getElementById('mDownload').disabled=flat.length===0;
   document.getElementById('mSummary').innerHTML = flat.length ? `<span class="ok">${flat.length} surebets de 2 apostas encontradas.</span> Melhor com bônus: <b>${dec(flat[0]['ROI com bônus %'])}%</b>; sem bônus: <b>${dec(flat[0]['ROI sem bônus %'])}%</b>.` : `<span class="warn">Nenhuma surebet de 2 apostas encontrada. Confira no log se os arquivos extraíram grupos/linhas.</span>`;
-  const cols=['Rank','ROI com bônus %','ROI sem bônus %','Lucro com bônus R$','Lucro sem bônus R$','Apostar Casa A R$','Apostar Casa B R$','Total apostado R$','Retorno R$','Apostas','Aviso bônus','Resumo','Mercado A','Mercado B','Periodo','Categoria','Time'];
-  document.getElementById('mTbl').innerHTML='<thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+flat.slice(0,500).map(r=>'<tr>'+cols.map(c=>`<td>${fmtTable(c,r[c])}${c==='Aviso bônus'&&r[c]?warningHtml(r[c]):''}</td>`).join('')+'</tr>').join('')+'</tbody>';
+  const cols=['Rank','ROI com bônus %','ROI sem bônus %','Lucro com bônus R$','Lucro sem bônus R$','Apostar Casa A R$','Apostar Casa B R$','Total apostado R$','Retorno R$','Apostas','Ações','Aviso bônus','Resumo','Mercado A','Mercado B','Periodo','Categoria','Time'];
+  document.getElementById('mTbl').innerHTML='<thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+flat.slice(0,500).map((r,i)=>'<tr>'+cols.map(c=>`<td>${c==='Ações'?actionButtons('multi',i):fmtTable(c,r[c])}${c==='Aviso bônus'&&r[c]?warningHtml(r[c]):''}</td>`).join('')+'</tr>').join('')+'</tbody>';
 }
 document.getElementById('mRun').onclick=()=>runMulti().catch(e=>{mlog('ERRO: '+e.message); document.getElementById('mSummary').innerHTML='<span class="err">'+e.message+'</span>';});
 document.getElementById('mDownload').onclick=()=>{ if(!lastMultiRows.length) return; exportPrettyWorkbook(lastMultiRows,'surebets_multi_2_apostas.xlsx','Multi Casas — 2 apostas'); };
@@ -2808,11 +3024,11 @@ function renderDuploGreen(results){
       'Mercado A':r.marketA, 'Mercado B':r.marketB, 'Linha A':r.lineA??'', 'Linha B':r.lineB??'', 'Periodo':r.period, 'Categoria':r.category, 'Time':r.time||'', 'Observação':r.obs
     });
   }
-  lastDgRows=flat.map(r=>{const x={...r}; delete x['Apostas']; return x;});
+  window.__lozzyStores.dg=flat; lastDgRows=flat.map(r=>{const x={...r}; delete x['Apostas']; return x;});
   document.getElementById('dgDownload').disabled=flat.length===0;
   document.getElementById('dgSummary').innerHTML = flat.length ? `<span class="ok">${flat.length} oportunidades encontradas.</span> Melhor com bônus: <b>${dec(flat[0]['ROI com bônus %'])}%</b>; sem bônus: <b>${dec(flat[0]['ROI sem bônus %'])}%</b>.` : `<span class="warn">Nenhum duplo green com surebet encontrado. Confira se os arquivos são do mesmo jogo e se os mercados foram carregados.</span>`;
-  const cols=['Rank','Tipo','ROI com bônus %','ROI sem bônus %','Lucro com bônus R$','Lucro sem bônus R$','Lucro se der duplo green R$','Apostar Casa A R$','Apostar Casa B R$','Total apostado R$','Apostas','Aviso bônus','Quando dá duplo green','Resumo','Mercado A','Mercado B','Periodo','Categoria','Time','Observação'];
-  document.getElementById('dgTbl').innerHTML='<thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+flat.slice(0,500).map(r=>'<tr>'+cols.map(c=>`<td>${fmtTable(c,r[c])}${c==='Aviso bônus'&&r[c]?warningHtml(r[c]):''}</td>`).join('')+'</tr>').join('')+'</tbody>';
+  const cols=['Rank','Tipo','ROI com bônus %','ROI sem bônus %','Lucro com bônus R$','Lucro sem bônus R$','Lucro se der duplo green R$','Apostar Casa A R$','Apostar Casa B R$','Total apostado R$','Apostas','Ações','Aviso bônus','Quando dá duplo green','Resumo','Mercado A','Mercado B','Periodo','Categoria','Time','Observação'];
+  document.getElementById('dgTbl').innerHTML='<thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+flat.slice(0,500).map((r,i)=>'<tr>'+cols.map(c=>`<td>${c==='Ações'?actionButtons('dg',i):fmtTable(c,r[c])}${c==='Aviso bônus'&&r[c]?warningHtml(r[c]):''}</td>`).join('')+'</tr>').join('')+'</tbody>';
 }
 document.getElementById('dgRun').onclick=()=>runDuploGreen().catch(e=>{dglog('ERRO: '+e.message); document.getElementById('dgSummary').innerHTML='<span class="err">'+e.message+'</span>';});
 document.getElementById('dgDownload').onclick=()=>{ if(!lastDgRows.length) return; exportPrettyWorkbook(lastDgRows,'duplo_green_surebet.xlsx','Duplo Green com Surebet'); };
@@ -2900,11 +3116,11 @@ function renderCategoryMarket(prefix,results,title){
       'Mercado A':r.marketA, 'Mercado B':r.marketB, 'Linha A':r.lineA??'', 'Linha B':r.lineB??'', 'Periodo':r.period, 'Categoria':r.category, 'Time':r.time||'', 'Confianca':r.confidence, 'Motivo':r.reason
     });
   }
-  lastCategoryRows[prefix]=flat.map(r=>{const x={...r}; delete x['Apostas']; return x;});
+  window.__lozzyStores[prefix]=flat; lastCategoryRows[prefix]=flat.map(r=>{const x={...r}; delete x['Apostas']; return x;});
   document.getElementById(prefix+'Download').disabled=flat.length===0;
   document.getElementById(prefix+'Summary').innerHTML = flat.length ? `<span class="ok">${flat.length} surebets de ${title} encontradas.</span> Melhor com bônus: <b>${dec(flat[0]['ROI com bônus %'])}%</b>; sem bônus: <b>${dec(flat[0]['ROI sem bônus %'])}%</b>.` : `<span class="warn">Nenhuma surebet de ${title} encontrada.</span>`;
-  const cols=['Rank','ROI com bônus %','ROI sem bônus %','Lucro com bônus R$','Lucro sem bônus R$','Apostar Casa A R$','Apostar Casa B R$','Total apostado R$','Retorno R$','Apostas','Aviso bônus','Resumo','Mercado A','Mercado B','Periodo','Categoria','Time'];
-  document.getElementById(prefix+'Tbl').innerHTML='<thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+flat.slice(0,500).map(r=>'<tr>'+cols.map(c=>`<td>${fmtTable(c,r[c])}${c==='Aviso bônus'&&r[c]?warningHtml(r[c]):''}</td>`).join('')+'</tr>').join('')+'</tbody>';
+  const cols=['Rank','ROI com bônus %','ROI sem bônus %','Lucro com bônus R$','Lucro sem bônus R$','Apostar Casa A R$','Apostar Casa B R$','Total apostado R$','Retorno R$','Apostas','Ações','Aviso bônus','Resumo','Mercado A','Mercado B','Periodo','Categoria','Time'];
+  document.getElementById(prefix+'Tbl').innerHTML='<thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+flat.slice(0,500).map((r,i)=>'<tr>'+cols.map(c=>`<td>${c==='Ações'?actionButtons(prefix,i):fmtTable(c,r[c])}${c==='Aviso bônus'&&r[c]?warningHtml(r[c]):''}</td>`).join('')+'</tr>').join('')+'</tbody>';
 }
 function setupCategoryTab(prefix,key,title,fileName){
   const runBtn=document.getElementById(prefix+'Run');
@@ -2954,24 +3170,52 @@ function calcManualSurebet(){
 
 // ===== Perfil / Histórico =====
 const PERFIL_KEY='surebet_lozzy_perfil_v1';
+function isOpenStatus(s){return String(s||'').toLowerCase()==='pendente'||String(s||'').toLowerCase()==='aberta';}
 function perfilDefault(){return {nome:'',bancaInicial:0,bancaAtual:'',apostas:[]};}
 function loadPerfil(){try{return {...perfilDefault(),...(JSON.parse(localStorage.getItem(PERFIL_KEY)||'{}'))};}catch(e){return perfilDefault();}}
 function savePerfil(p){localStorage.setItem(PERFIL_KEY,JSON.stringify(p));}
-function perfilLucro(ap){return (Number(ap.retorno)||0)-(Number(ap.stake)||0);}
+
+function normPerfilStatus(a){
+  const s=String(a?.status||'').toLowerCase();
+  const r=String(a?.resultado||'').toLowerCase();
+  if(s==='pendente' || s==='aberta') return 'Aberta';
+  if(s==='perdida' || r==='perdida') return 'Perdida';
+  if(s==='ganha' || s==='finalizada' || r==='ganha') return 'Ganha';
+  return String(a?.status||'Aberta');
+}
+function isFinalPerfilBet(a){
+  const s=normPerfilStatus(a);
+  return s==='Ganha' || s==='Perdida';
+}
+function perfilRetornoReal(a){
+  const s=normPerfilStatus(a);
+  if(s==='Perdida') return 0;
+  return Number(a?.retorno)||0;
+}
+function perfilLucro(ap){return perfilRetornoReal(ap)-(Number(ap.stake)||0);}
 function renderPerfil(){
   const p=loadPerfil();
   const nome=document.getElementById('perfilNome'), bi=document.getElementById('perfilBancaInicial'), ba=document.getElementById('perfilBancaAtual');
+
   if(nome && document.activeElement!==nome) nome.value=p.nome||'';
   if(bi && document.activeElement!==bi) bi.value=p.bancaInicial||0;
-  if(ba && document.activeElement!==ba) ba.value=p.bancaAtual||'';
+
   const apostas=p.apostas||[];
-  const finalizadas=apostas.filter(a=>a.status!=='Pendente');
+  (p.apostas||[]).forEach(a=>{ recalcHistoryBet(a); if(normPerfilStatus(a)==='Perdida') a.retorno=0; });
+
+  const finalizadas=apostas.filter(a=>isFinalPerfilBet(a));
   const totalApostado=finalizadas.reduce((s,a)=>s+(Number(a.stake)||0),0);
-  const retorno=finalizadas.reduce((s,a)=>s+(Number(a.retorno)||0),0);
+  const retorno=finalizadas.reduce((s,a)=>s+perfilRetornoReal(a),0);
   const lucro=retorno-totalApostado;
   const roi=totalApostado>0?lucro/totalApostado:0;
   const bancaFinal=(Number(p.bancaInicial)||0)+lucro;
-  const bancaMostrada=p.bancaAtual!==''&&p.bancaAtual!==null&&p.bancaAtual!==undefined?Number(p.bancaAtual):bancaFinal;
+  const bancaMostrada=bancaFinal;
+
+  // Salva e mostra a banca já recalculada.
+  p.bancaAtual=bancaFinal;
+  savePerfil(p);
+  if(ba && document.activeElement!==ba) ba.value=Number.isFinite(bancaFinal) ? Number(bancaFinal).toFixed(2) : '0.00';
+
   const resumo=document.getElementById('perfilResumo');
   if(resumo){resumo.innerHTML=`
       <div class="kpi"><div class="label">Apostas finalizadas</div><div class="value">${finalizadas.length}</div></div>
@@ -2979,110 +3223,312 @@ function renderPerfil(){
       <div class="kpi"><div class="label">Lucro / prejuízo</div><div class="value">${money(lucro)}</div></div>
       <div class="kpi"><div class="label">ROI acumulado</div><div class="value">${dec(roi*100)}%</div></div>
       <div class="kpi"><div class="label">Banca estimada</div><div class="value">${money(bancaMostrada)}</div></div>`;}
-  renderPerfilChart(p); renderPerfilTable(p);
+  renderPerfilCharts(p); renderPerfilTable(p);
+}
+function drawRoundedRect(ctx,x,y,w,h,r){
+  ctx.beginPath(); ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r); ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+}
+function prepCanvas(id){
+  const canvas=document.getElementById(id); if(!canvas) return null;
+  const ctx=canvas.getContext('2d'); const ratio=window.devicePixelRatio||1;
+  const cw=canvas.clientWidth||600, ch=canvas.clientHeight||280; canvas.width=cw*ratio; canvas.height=ch*ratio; ctx.setTransform(ratio,0,0,ratio,0,0);
+  ctx.clearRect(0,0,cw,ch); drawRoundedRect(ctx,0,0,cw,ch,18); ctx.fillStyle='rgba(2,6,23,.30)'; ctx.fill();
+  return {canvas,ctx,cw,ch};
+}
+function groupSum(rows,keyFn,valFn){
+  const m={}; rows.forEach(r=>{const k=keyFn(r)||'Não informado'; m[k]=(m[k]||0)+(valFn(r)||0);});
+  return Object.entries(m).map(([name,value])=>({name,value})).sort((a,b)=>b.value-a.value);
+}
+function drawBarChart(id, rows, title, formatter=money){
+  const c=prepCanvas(id); if(!c) return; const {ctx,cw,ch}=c;
+  const data=rows.slice(0,8); const pad=42; const barH=Math.max(18, Math.min(34, (ch-pad-20)/Math.max(1,data.length)-8));
+  const max=Math.max(1,...data.map(d=>Math.abs(d.value)));
+  ctx.fillStyle='#e5e7eb'; ctx.font='bold 13px Arial'; ctx.fillText(title,pad,22);
+  if(!data.length){ctx.fillStyle='#94a3b8'; ctx.fillText('Sem dados finalizados ainda.',pad,52); return;}
+  data.forEach((d,i)=>{
+    const y=48+i*(barH+9); const label=String(d.name).slice(0,26);
+    ctx.fillStyle='#cbd5e1'; ctx.font='12px Arial'; ctx.fillText(label,pad,y+barH-3);
+    const x=pad+170; const w=(Math.abs(d.value)/max)*(cw-x-pad);
+    ctx.fillStyle=d.value>=0?'rgba(34,197,94,.85)':'rgba(239,68,68,.85)';
+    drawRoundedRect(ctx,x,y,w,barH,8); ctx.fill();
+    ctx.fillStyle='#e5e7eb'; ctx.font='12px Arial'; ctx.fillText(formatter(d.value),x+w+6,y+barH-4);
+  });
 }
 function renderPerfilChart(p){
-  const canvas=document.getElementById('perfilChart'); if(!canvas) return;
-  const ctx=canvas.getContext('2d'); const ratio=window.devicePixelRatio||1;
-  const cw=canvas.clientWidth||800, ch=canvas.clientHeight||300; canvas.width=cw*ratio; canvas.height=ch*ratio; ctx.setTransform(ratio,0,0,ratio,0,0);
-  ctx.clearRect(0,0,cw,ch);
-
-  // Fundo arredondado
-  function roundRect(x,y,w,h,r){
-    ctx.beginPath();
-    ctx.moveTo(x+r,y);
-    ctx.lineTo(x+w-r,y);
-    ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-    ctx.lineTo(x+w,y+h-r);
-    ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-    ctx.lineTo(x+r,y+h);
-    ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-    ctx.lineTo(x,y+r);
-    ctx.quadraticCurveTo(x,y,x+r,y);
-    ctx.closePath();
-  }
-  roundRect(0,0,cw,ch,18);
-  ctx.fillStyle='rgba(2,6,23,.35)';
-  ctx.fill();
-
-  const apostas=(p.apostas||[]).filter(a=>a.status!=='Pendente').slice().sort((a,b)=>String(a.data||'').localeCompare(String(b.data||'')));
+  const c=prepCanvas('perfilChart'); if(!c) return; const {ctx,cw,ch}=c;
+  const apostas=(p.apostas||[]).filter(a=>isFinalPerfilBet(a)).slice().sort((a,b)=>String(a.data||'').localeCompare(String(b.data||'')));
   let acum=0; const points=[{y:0}]; apostas.forEach(a=>{acum+=perfilLucro(a); points.push({y:acum});});
   const pad=38, minY=Math.min(0,...points.map(p=>p.y)), maxY=Math.max(0,...points.map(p=>p.y)), span=(maxY-minY)||1;
-  const xOf=i=>pad+(points.length<=1?0:(i/(points.length-1))*(cw-pad*2));
-  const yOf=v=>ch-pad-((v-minY)/span)*(ch-pad*2);
+  const xOf=i=>pad+(points.length<=1?0:(i/(points.length-1))*(cw-pad*2)); const yOf=v=>ch-pad-((v-minY)/span)*(ch-pad*2);
   const pts=points.map((pt,i)=>({x:xOf(i),y:yOf(pt.y),val:pt.y}));
-
-  // Grade suave
-  ctx.strokeStyle='rgba(148,163,184,.14)';
-  ctx.lineWidth=1;
-  for(let i=0;i<4;i++){
-    const y=pad+i*((ch-pad*2)/3);
-    ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(cw-pad,y); ctx.stroke();
-  }
-
-  // Linha do zero
-  ctx.strokeStyle='rgba(148,163,184,.38)';
-  ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(pad,yOf(0)); ctx.lineTo(cw-pad,yOf(0)); ctx.stroke();
-
-  // Área abaixo da curva
+  ctx.strokeStyle='rgba(148,163,184,.14)'; ctx.lineWidth=1;
+  for(let i=0;i<4;i++){const y=pad+i*((ch-pad*2)/3); ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(cw-pad,y); ctx.stroke();}
+  ctx.strokeStyle='rgba(148,163,184,.38)'; ctx.beginPath(); ctx.moveTo(pad,yOf(0)); ctx.lineTo(cw-pad,yOf(0)); ctx.stroke();
   if(pts.length>1){
-    const grad=ctx.createLinearGradient(0,pad,0,ch-pad);
-    grad.addColorStop(0,'rgba(34,197,94,.24)');
-    grad.addColorStop(1,'rgba(34,197,94,.02)');
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x,ch-pad);
-    ctx.lineTo(pts[0].x,pts[0].y);
-    for(let i=0;i<pts.length-1;i++){
-      const p0=pts[i], p1=pts[i+1];
-      const midX=(p0.x+p1.x)/2;
-      ctx.bezierCurveTo(midX,p0.y,midX,p1.y,p1.x,p1.y);
-    }
-    ctx.lineTo(pts[pts.length-1].x,ch-pad);
-    ctx.closePath();
-    ctx.fillStyle=grad;
-    ctx.fill();
+    const grad=ctx.createLinearGradient(0,pad,0,ch-pad); grad.addColorStop(0,'rgba(34,197,94,.24)'); grad.addColorStop(1,'rgba(34,197,94,.02)');
+    ctx.beginPath(); ctx.moveTo(pts[0].x,ch-pad); ctx.lineTo(pts[0].x,pts[0].y);
+    for(let i=0;i<pts.length-1;i++){const p0=pts[i], p1=pts[i+1], midX=(p0.x+p1.x)/2; ctx.bezierCurveTo(midX,p0.y,midX,p1.y,p1.x,p1.y);}
+    ctx.lineTo(pts[pts.length-1].x,ch-pad); ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
   }
-
-  // Curva arredondada
-  ctx.strokeStyle=acum>=0?'rgba(34,197,94,.98)':'rgba(239,68,68,.98)';
-  ctx.lineWidth=3.5;
-  ctx.lineCap='round';
-  ctx.lineJoin='round';
-  ctx.beginPath();
-  if(pts.length){
-    ctx.moveTo(pts[0].x,pts[0].y);
-    for(let i=0;i<pts.length-1;i++){
-      const p0=pts[i], p1=pts[i+1];
-      const midX=(p0.x+p1.x)/2;
-      ctx.bezierCurveTo(midX,p0.y,midX,p1.y,p1.x,p1.y);
-    }
-  }
+  ctx.strokeStyle=acum>=0?'rgba(34,197,94,.98)':'rgba(239,68,68,.98)'; ctx.lineWidth=3.5; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath();
+  if(pts.length){ctx.moveTo(pts[0].x,pts[0].y); for(let i=0;i<pts.length-1;i++){const p0=pts[i], p1=pts[i+1], midX=(p0.x+p1.x)/2; ctx.bezierCurveTo(midX,p0.y,midX,p1.y,p1.x,p1.y);}}
   ctx.stroke();
-
-  // Pontos arredondados
-  pts.forEach((pt)=>{
-    ctx.fillStyle=pt.val>=0?'#22c55e':'#ef4444';
-    ctx.strokeStyle='rgba(2,6,23,.95)';
-    ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(pt.x,pt.y,5,0,Math.PI*2); ctx.fill(); ctx.stroke();
-  });
-
-  ctx.fillStyle='#e5e7eb'; ctx.font='bold 13px Arial'; ctx.fillText(`Lucro acumulado: ${money(acum)}`,pad,20);
-  ctx.fillStyle='#94a3b8'; ctx.font='12px Arial'; ctx.fillText(`Mín: ${money(minY)} • Máx: ${money(maxY)}`,pad,39);
+  pts.forEach(pt=>{ctx.fillStyle=pt.val>=0?'#22c55e':'#ef4444'; ctx.strokeStyle='rgba(2,6,23,.95)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(pt.x,pt.y,5,0,Math.PI*2); ctx.fill(); ctx.stroke();});
+  ctx.fillStyle='#e5e7eb'; ctx.font='bold 13px Arial'; ctx.fillText(`Lucro acumulado: ${money(acum)}`,pad,20); ctx.fillStyle='#94a3b8'; ctx.font='12px Arial'; ctx.fillText(`Mín: ${money(minY)} • Máx: ${money(maxY)}`,pad,39);
+}
+function renderPerfilCharts(p){
+  const rows=(p.apostas||[]).filter(a=>isFinalPerfilBet(a));
+  renderPerfilChart(p);
+  drawBarChart('perfilChartCasa', groupSum(rows, a=>a.casas||'Manual', perfilLucro), 'Lucro por casa', money);
+  drawBarChart('perfilChartTipo', groupSum(rows, a=>a.tipo||'Outro', perfilLucro), 'Lucro por tipo', money);
 }
 function renderPerfilTable(p){
   const tbl=document.getElementById('perfilTbl'); if(!tbl) return;
-  const rows=(p.apostas||[]).map((a,i)=>({'#':i+1,'Data':a.data||'','Descrição':a.desc||'','Tipo':a.tipo||'','Status':a.status||'','Apostado R$':Number(a.stake)||0,'Retorno R$':Number(a.retorno)||0,'Lucro R$':perfilLucro(a),'ROI %':(Number(a.stake)>0?perfilLucro(a)/Number(a.stake)*100:0)}));
-  const cols=['#','Data','Descrição','Tipo','Status','Apostado R$','Retorno R$','Lucro R$','ROI %','Ação'];
+  // Garante compatibilidade com históricos antigos.
+  (p.apostas||[]).forEach(a=>{
+    if(a.status==='Pendente') a.status='Aberta';
+    if(a.stakeA===undefined && a.stakeB===undefined){
+      a.stakeA=Number(a.stake)||0;      // disponível na casa A
+      a.stakeB=0;                       // disponível na casa B
+      a.recStakeA=Number(a.stake)||0;   // valor recomendado
+      a.recStakeB=0;
+      a.casaA=a.casas||'Casa A';
+      a.casaB='';
+      a.retornoRate=(Number(a.stake)>0?Number(a.retorno||0)/Number(a.stake):Number(a.retornoRate||1));
+    }
+    recalcHistoryBet(a);
+    if(normPerfilStatus(a)==='Perdida') a.retorno=0;
+  });
+  savePerfil(p);
+
+  const rows=(p.apostas||[]).map((a,i)=>{
+    const stake=Number(a.stake)||0;
+    const retorno=perfilRetornoReal(a);
+    const lucro=perfilLucro(a);
+    return {
+      '#':i+1,
+      'Data':a.data||'',
+      'Descrição':a.desc||'',
+      'Casa A':a.casaA||'Casa A',
+      'Casa B':a.casaB||'',
+      'Apostar Casa A R$':Number(a.recStakeA)||0,
+      'Apostar Casa B R$':Number(a.recStakeB)||0,
+      'Status':normPerfilStatus(a),
+      'Resultado':(['Ganha','Perdida'].includes(normPerfilStatus(a))?normPerfilStatus(a):''),
+      'Apostado R$':stake,
+      'Retorno R$':retorno,
+      'Lucro R$':lucro,
+      'ROI %':(stake>0?lucro/stake*100:0)
+    };
+  });
+  const cols=['#','Data','Descrição','Casa A','Casa B','Apostar Casa A R$','Apostar Casa B R$','Status','Resultado','Apostado R$','Retorno R$','Lucro R$','ROI %','Ação'];
   tbl.innerHTML='<thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+
-    rows.map((r,i)=>'<tr>'+cols.map(c=>{if(c==='Ação') return `<td><button class="dangerbtn" style="width:auto;padding:7px 10px" onclick="perfilDeleteAposta(${i})">Excluir</button></td>`; const v=r[c]; if(c.includes('R$')) return `<td>${money(v)}</td>`; if(c.includes('%')) return `<td>${dec(v)}%</td>`; return `<td>${String(v??'')}</td>`;}).join('')+'</tr>').join('')+'</tbody>';
+    rows.map((r,i)=>'<tr>'+cols.map(c=>{
+      if(c==='Ação'){
+        const lost=(String(r.Resultado||'').toLowerCase()==='perdida'||String(r.Status||'').toLowerCase()==='perdida');
+        const open=isOpenStatus(r.Status);
+        return `<td><div class="rowactions"><button class="histbtn" onclick="perfilToggleStatus(${i})">${open?'Finalizar':'Reabrir'}</button><button class="dangerbtn" style="width:auto;padding:7px 10px" onclick="perfilDeleteAposta(${i})">Excluir</button>${lost?'<div class="err" style="width:100%;font-weight:900;margin-top:6px">Perdida</div>':''}</div></td>`;
+      }
+      if(c==='Casa A') return `<td><div class="houseedit"><b>${String(r['Casa A']||'Casa A')}</b><small>Valor disponível</small><input class="moneyedit" type="number" step="0.01" value="${Number((p.apostas[i]||{}).stakeA||0).toFixed(2)}" onchange="perfilUpdateHouseStake(${i},'A',this.value)" onkeydown="if(event.key==='Enter') this.blur()" /></div></td>`;
+      if(c==='Casa B'){
+        const a=p.apostas[i]||{};
+        if(!a.casaB && !(Number(a.stakeB)>0)) return `<td><span class="muted">—</span></td>`;
+        return `<td><div class="houseedit"><b>${String(r['Casa B']||'Casa B')}</b><small>Valor disponível</small><input class="moneyedit" type="number" step="0.01" value="${Number(a.stakeB||0).toFixed(2)}" onchange="perfilUpdateHouseStake(${i},'B',this.value)" onkeydown="if(event.key==='Enter') this.blur()" /></div></td>`;
+      }
+      if(c==='Apostar Casa A R$' || c==='Apostar Casa B R$'){
+        const v=Number(r[c])||0;
+        if(v<=0) return `<td><span class="muted">—</span></td>`;
+        return `<td><b>${money(v)}</b></td>`;
+      }
+      const v=r[c];
+      if(c.includes('R$')) return `<td>${money(v)}</td>`;
+      if(c.includes('%')) return `<td>${dec(v)}%</td>`;
+      return `<td>${String(v??'')}</td>`;
+    }).join('')+'</tr>').join('')+'</tbody>';
+}
+function perfilUpdateHouseStake(i,side,val){
+  const p=loadPerfil();
+  const a=p.apostas[i];
+  if(!a) return;
+  const novo=Number(String(val).replace(',','.'));
+  if(!Number.isFinite(novo) || novo<0){renderPerfil(); return;}
+  if(side==='A') a.stakeA=novo; // disponível na casa A
+  if(side==='B') a.stakeB=novo; // disponível na casa B
+  recalcHistoryBet(a);
+  savePerfil(p);
+  renderPerfil();
+}
+function perfilUpdateStake(i,val){
+  perfilUpdateHouseStake(i,'A',val);
+}
+
+function isDoubleHistoryBet(a){
+  const t=String(a?.tipo||'').toLowerCase();
+  return t.includes('surebet') || t.includes('duplo');
+}
+function closeResultModal(){
+  const el=document.getElementById('resultModal');
+  if(el) el.remove();
+}
+function chooseManualResult(i){
+  closeResultModal();
+  const p=loadPerfil();
+  const a=p.apostas[i];
+  if(!a) return;
+  const stake=Number(a.stake)||0;
+  const potential=Number(a.retorno)||0;
+  const desc=String(a.desc||'Aposta');
+  const modal=document.createElement('div');
+  modal.id='resultModal';
+  modal.className='modalOverlay';
+  modal.innerHTML=`<div class="modalBox">
+    <h3>Finalizar aposta</h3>
+    <div class="muted">Escolha o resultado de:<br><b>${desc}</b></div>
+    <div class="modalActions">
+      <button class="winbtn" onclick="perfilFinishManual(${i},true)">Ganha</button>
+      <button class="losebtn" onclick="perfilFinishManual(${i},false)">Perdida</button>
+      <button class="lightbtn" onclick="closeResultModal()">Cancelar</button>
+    </div>
+    <p class="muted small">Se marcar como ganha, o retorno fica ${money(potential)}. Se marcar como perdida, o retorno fica R$ 0,00 e o prejuízo fica ${money(-stake)}.</p>
+  </div>`;
+  document.body.appendChild(modal);
+}
+function perfilFinishManual(i,won){
+  const p=loadPerfil();
+  const a=p.apostas[i];
+  if(!a) return;
+  const stake=Number(a.stake)||0;
+  let rate=Number(a.retornoRate);
+  if(!(rate>0)) rate=Number(a.oddA)||0;
+  if(!(rate>0)) rate=1;
+  a.status=won?'Ganha':'Perdida';
+  a.resultado=won?'Ganha':'Perdida';
+  a.retorno=won ? stake*rate : 0;
+  savePerfil(p);
+  closeResultModal();
+  renderPerfil();
+}
+
+function perfilToggleStatus(i){
+  const p=loadPerfil();
+  const a=p.apostas[i];
+  if(!a) return;
+  if(isOpenStatus(a.status)){
+    if(!isDoubleHistoryBet(a)){
+      chooseManualResult(i);
+      return;
+    }
+    a.status='Ganha';
+    a.resultado='Ganha';
+  }else{
+    a.status='Aberta';
+    delete a.resultado;
+    // Ao reabrir aposta manual, volta ao retorno potencial calculado pela odd.
+    if(!isDoubleHistoryBet(a)){
+      const stake=Number(a.stake)||0;
+      let rate=Number(a.retornoRate);
+      if(!(rate>0)) rate=Number(a.oddA)||0;
+      if(!(rate>0)) rate=1;
+      a.retorno=stake*rate;
+    }
+  }
+  savePerfil(p);
+  renderPerfil();
 }
 function perfilDeleteAposta(i){const p=loadPerfil(); p.apostas.splice(i,1); savePerfil(p); renderPerfil();}
 function setupPerfil(){
   const data=document.getElementById('apostaData'); if(data && !data.value) data.value=new Date().toISOString().slice(0,10);
-  const salvar=document.getElementById('perfilSalvar'); if(salvar) salvar.onclick=()=>{const p=loadPerfil(); p.nome=document.getElementById('perfilNome').value||''; p.bancaInicial=getNum('perfilBancaInicial',0); const ba=document.getElementById('perfilBancaAtual').value; p.bancaAtual=ba===''?'':Number(ba); savePerfil(p); renderPerfil();};
-  const add=document.getElementById('apostaAdd'); if(add) add.onclick=()=>{const p=loadPerfil(); p.apostas.push({data:document.getElementById('apostaData').value||new Date().toISOString().slice(0,10),desc:document.getElementById('apostaDesc').value||'',stake:getNum('apostaStake',0),retorno:getNum('apostaRetorno',0),tipo:document.getElementById('apostaTipo').value,status:document.getElementById('apostaStatus').value}); savePerfil(p); document.getElementById('apostaDesc').value=''; document.getElementById('apostaStake').value='0'; document.getElementById('apostaRetorno').value='0'; renderPerfil();};
+  const salvar=document.getElementById('perfilSalvar'); if(salvar) salvar.onclick=()=>{const p=loadPerfil(); p.nome=document.getElementById('perfilNome').value||''; p.bancaInicial=getNum('perfilBancaInicial',0); p.bancaAtual=p.bancaInicial + (p.apostas||[]).filter(a=>isFinalPerfilBet(a)).reduce((s,a)=>s+perfilLucro(a),0); savePerfil(p); renderPerfil();};
+  function updateManualFormVisibility(){
+  const tipo=document.getElementById('apostaTipo')?.value || 'Manual';
+  const isDouble=(tipo==='Surebet' || tipo==='Duplo Green');
+  const single=document.getElementById('manualSingleFields');
+  const dbl=document.getElementById('surebetDoubleFields');
+  if(single) single.style.display=isDouble?'none':'contents';
+  if(dbl) dbl.style.display=isDouble?'contents':'none';
+  updateManualReturnPreview();
+}
+function updateManualReturnPreview(){
+  const box=document.getElementById('apostaRetornoAuto');
+  if(!box) return;
+  const valor=getNum('apostaValorUnico',0);
+  const odd=getNum('apostaOddUnica',0);
+  box.textContent=money(valor*Math.max(0,odd));
+}
+const add=document.getElementById('apostaAdd');
+  if(add) add.onclick=()=>{
+    const p=loadPerfil();
+    const tipo=document.getElementById('apostaTipo').value;
+    const isDouble=(tipo==='Surebet' || tipo==='Duplo Green');
+    let aposta=null;
+
+    if(isDouble){
+      const casaA=(document.getElementById('apostaCasaA')?.value||'Casa A').trim()||'Casa A';
+      const casaB=(document.getElementById('apostaCasaB')?.value||'Casa B').trim()||'Casa B';
+      const stakeA=getNum('apostaStakeA',0);
+      const stakeB=getNum('apostaStakeB',0);
+      const oddA=getNum('apostaOddA',0);
+      const oddB=getNum('apostaOddB',0);
+      aposta={
+        data:document.getElementById('apostaData').value||new Date().toISOString().slice(0,10),
+        desc:document.getElementById('apostaDesc').value||'',
+        stake:stakeA+stakeB,
+        retorno:0,
+        tipo,
+        status:document.getElementById('apostaStatus').value,
+        casas:`${casaA} x ${casaB}`,
+        casaA,
+        casaB,
+        stakeA,
+        stakeB,
+        recStakeA:stakeA,
+        recStakeB:stakeB,
+        oddA,
+        oddB,
+        categoria:tipo,
+        retornoRate:1
+      };
+      recalcHistoryBet(aposta);
+    }else{
+      const casa=(document.getElementById('apostaCasaUnica')?.value||'Casa de aposta').trim()||'Casa de aposta';
+      const valor=getNum('apostaValorUnico',0);
+      const odd=getNum('apostaOddUnica',0);
+      const retorno=valor*Math.max(0,odd);
+      aposta={
+        data:document.getElementById('apostaData').value||new Date().toISOString().slice(0,10),
+        desc:document.getElementById('apostaDesc').value||'',
+        stake:valor,
+        retorno,
+        tipo,
+        status:document.getElementById('apostaStatus').value,
+        casas:casa,
+        casaA:casa,
+        casaB:'',
+        stakeA:valor,
+        stakeB:0,
+        recStakeA:valor,
+        recStakeB:0,
+        oddA:odd,
+        oddB:0,
+        categoria:tipo,
+        retornoRate:(valor>0?retorno/valor:1)
+      };
+    }
+
+    p.apostas.push(aposta);
+    savePerfil(p);
+    ['apostaDesc','apostaCasaUnica','apostaCasaA','apostaCasaB'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+    ['apostaValorUnico','apostaOddUnica','apostaStakeA','apostaStakeB','apostaOddA','apostaOddB'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='0';});
+    updateManualFormVisibility();
+    renderPerfil();
+  };
+  const tipoSel=document.getElementById('apostaTipo');
+  if(tipoSel) tipoSel.onchange=updateManualFormVisibility;
+  ['apostaValorUnico','apostaOddUnica'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.oninput=updateManualReturnPreview;
+  });
+  updateManualFormVisibility();
   const limpar=document.getElementById('perfilLimpar'); if(limpar) limpar.onclick=()=>{if(confirm('Apagar todo o perfil e histórico deste dispositivo?')){localStorage.removeItem(PERFIL_KEY); renderPerfil();}};
   const exp=document.getElementById('perfilExportar'); if(exp) exp.onclick=()=>{const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(loadPerfil(),null,2)],{type:'application/json'})); a.download='perfil_surebet_lozzy.json'; a.click();};
   const impBtn=document.getElementById('perfilImportarBtn'), imp=document.getElementById('perfilImportar'); if(impBtn&&imp) impBtn.onclick=()=>imp.click(); if(imp) imp.onchange=async()=>{const f=imp.files[0]; if(!f) return; try{savePerfil(JSON.parse(await f.text())); renderPerfil();}catch(e){alert('JSON inválido.');}};
