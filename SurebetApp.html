@@ -2295,10 +2295,18 @@ function configureTeamsFromSportingbet(fixture){
   return {home:HOME,away:AWAY};
 }
 function sbMarketPeriod(m){
+  const name=getSBValue(m?.name);
+  // Sportingbet às vezes manda Period=FirstHalf mesmo em mercados de intervalo,
+  // exemplo: "Total de Escanteios - 00:00-15:00".
+  // Nesses casos precisamos preservar o período específico, senão o app compara
+  // errado com "1º tempo inteiro".
+  const namePeriod=getPeriod(name);
+  if(/\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}/.test(stripAccents(name).toLowerCase())) return namePeriod;
   const p=sbParam(m?.parameters,'Period');
   if(p==='FirstHalf') return '1T';
   if(p==='SecondHalf') return '2T';
-  return getPeriod(getSBValue(m?.name));
+  if(p==='RegularTime') return 'Jogo';
+  return namePeriod;
 }
 function sbMarketLine(m, outs){
   const dv=sbParam(m?.parameters,'DecimalValue') || sbParam(m?.parameters,'Value') || sbParam(m?.parameters,'IntegerValue');

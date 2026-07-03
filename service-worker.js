@@ -1,4 +1,4 @@
-const CACHE_NAME = 'surebet-lozzy-v36';
+const CACHE_NAME = 'surebet-lozzy-v37';
 const APP_SHELL = [
   './',
   './SurebetApp.html',
