@@ -449,6 +449,7 @@
         <div><label>Arquivo Superbet</label><input id="mFileSuperbet" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
         <div><label>Arquivo EstrelaBet</label><input id="mFileEstrelabet" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
         <div><label>Arquivo Bet365</label><input id="mFileBet365" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
+        <div><label>Arquivo Sportingbet</label><input id="mFileSportingbet" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
       </div>
       <hr style="border:0;border-top:1px solid #e5e7eb;margin:16px 0" />
       <div class="grid">
@@ -456,18 +457,20 @@
         <div><label>Stake Superbet (R$)</label><input id="mStakeSuperbet" type="number" step="0.01" value="100" /></div>
         <div><label>Stake EstrelaBet (R$)</label><input id="mStakeEstrelabet" type="number" step="0.01" value="100" /></div>
         <div><label>Stake Bet365 (R$)</label><input id="mStakeBet365" type="number" step="0.01" value="100" /></div>
+        <div><label>Stake Sportingbet (R$)</label><input id="mStakeSportingbet" type="number" step="0.01" value="100" /></div>
       </div>
       <div class="grid" style="margin-top:12px">
         <div><label>Bônus Betano sobre lucro (%)</label><input id="mBonusBetano" type="number" step="0.01" value="0" /></div>
         <div><label>Bônus Superbet sobre lucro (%)</label><input id="mBonusSuperbet" type="number" step="0.01" value="30" /></div>
         <div><label>Bônus EstrelaBet sobre lucro (%)</label><input id="mBonusEstrelabet" type="number" step="0.01" value="0" /></div>
         <div><label>Bônus Bet365 sobre lucro (%)</label><input id="mBonusBet365" type="number" step="0.01" value="0" /></div>
+        <div><label>Bônus Sportingbet sobre lucro (%)</label><input id="mBonusSportingbet" type="number" step="0.01" value="0" /></div>
         <div><label>ROI mínimo (%)</label><input id="mRoiMin" type="number" step="0.01" value="0" /></div>
         <div><label>Filtro do jogo (opcional)</label><input id="mGameFilter" type="text" value="" placeholder="ex.: Suíça Argélia" /></div>
       </div>
       <p><button id="mRun">Analisar Multi Casas</button></p>
       <p><button id="mDownload" disabled>Baixar Excel</button></p>
-      <p class="muted small">Betano, Superbet, EstrelaBet e Bet365 têm extratores específicos. A Bet365 é lida a partir de matchbettingcontentapi/coupon e betbuilderpregamecontentapi/wizard, convertendo odds fracionárias para decimal. A v16 bloqueia comparações entre chutes no gol, finalizações e tiros de meta e também mercados combinados como Result / Total Goals quando não forem o mesmo mercado.</p>
+      <p class="muted small">Betano, Superbet, EstrelaBet, Bet365 e Sportingbet têm extratores específicos. A Bet365 é lida a partir de matchbettingcontentapi/coupon e betbuilderpregamecontentapi/wizard, convertendo odds fracionárias para decimal. A v16 bloqueia comparações entre chutes no gol, finalizações e tiros de meta e também mercados combinados como Result / Total Goals quando não forem o mesmo mercado.</p>
     </div>
 
     <div class="card"><b>Status Multi</b><div id="mLog" class="log">Aguardando arquivos...</div></div>
@@ -518,6 +521,7 @@
         <div><label>Arquivo Superbet</label><input id="catEscFileSuperbet" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
         <div><label>Arquivo EstrelaBet</label><input id="catEscFileEstrelabet" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
         <div><label>Arquivo Bet365</label><input id="catEscFileBet365" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
+        <div><label>Arquivo Sportingbet</label><input id="catEscFileSportingbet" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
       </div>
       <hr style="border:0;border-top:1px solid #e5e7eb;margin:16px 0" />
       <div class="grid">
@@ -525,12 +529,14 @@
         <div><label>Stake Superbet (R$)</label><input id="catEscStakeSuperbet" type="number" step="0.01" value="100" /></div>
         <div><label>Stake EstrelaBet (R$)</label><input id="catEscStakeEstrelabet" type="number" step="0.01" value="100" /></div>
         <div><label>Stake Bet365 (R$)</label><input id="catEscStakeBet365" type="number" step="0.01" value="100" /></div>
+        <div><label>Stake Sportingbet (R$)</label><input id="catEscStakeSportingbet" type="number" step="0.01" value="100" /></div>
       </div>
       <div class="grid" style="margin-top:12px">
         <div><label>Bônus Betano sobre lucro (%)</label><input id="catEscBonusBetano" type="number" step="0.01" value="0" /></div>
         <div><label>Bônus Superbet sobre lucro (%)</label><input id="catEscBonusSuperbet" type="number" step="0.01" value="30" /></div>
         <div><label>Bônus EstrelaBet sobre lucro (%)</label><input id="catEscBonusEstrelabet" type="number" step="0.01" value="0" /></div>
         <div><label>Bônus Bet365 sobre lucro (%)</label><input id="catEscBonusBet365" type="number" step="0.01" value="0" /></div>
+        <div><label>Bônus Sportingbet sobre lucro (%)</label><input id="catEscBonusSportingbet" type="number" step="0.01" value="0" /></div>
         <div><label>ROI mínimo (%)</label><input id="catEscRoiMin" type="number" step="0.01" value="0" /></div>
         <div><label>Filtro do jogo (opcional)</label><input id="catEscGameFilter" type="text" value="" placeholder="ex.: Espanha Áustria" /></div>
       </div>
@@ -550,6 +556,7 @@
         <div><label>Arquivo Superbet</label><input id="catCarFileSuperbet" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
         <div><label>Arquivo EstrelaBet</label><input id="catCarFileEstrelabet" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
         <div><label>Arquivo Bet365</label><input id="catCarFileBet365" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
+        <div><label>Arquivo Sportingbet</label><input id="catCarFileSportingbet" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
       </div>
       <hr style="border:0;border-top:1px solid #e5e7eb;margin:16px 0" />
       <div class="grid">
@@ -557,12 +564,14 @@
         <div><label>Stake Superbet (R$)</label><input id="catCarStakeSuperbet" type="number" step="0.01" value="100" /></div>
         <div><label>Stake EstrelaBet (R$)</label><input id="catCarStakeEstrelabet" type="number" step="0.01" value="100" /></div>
         <div><label>Stake Bet365 (R$)</label><input id="catCarStakeBet365" type="number" step="0.01" value="100" /></div>
+        <div><label>Stake Sportingbet (R$)</label><input id="catCarStakeSportingbet" type="number" step="0.01" value="100" /></div>
       </div>
       <div class="grid" style="margin-top:12px">
         <div><label>Bônus Betano sobre lucro (%)</label><input id="catCarBonusBetano" type="number" step="0.01" value="0" /></div>
         <div><label>Bônus Superbet sobre lucro (%)</label><input id="catCarBonusSuperbet" type="number" step="0.01" value="30" /></div>
         <div><label>Bônus EstrelaBet sobre lucro (%)</label><input id="catCarBonusEstrelabet" type="number" step="0.01" value="0" /></div>
         <div><label>Bônus Bet365 sobre lucro (%)</label><input id="catCarBonusBet365" type="number" step="0.01" value="0" /></div>
+        <div><label>Bônus Sportingbet sobre lucro (%)</label><input id="catCarBonusSportingbet" type="number" step="0.01" value="0" /></div>
         <div><label>ROI mínimo (%)</label><input id="catCarRoiMin" type="number" step="0.01" value="0" /></div>
         <div><label>Filtro do jogo (opcional)</label><input id="catCarGameFilter" type="text" value="" placeholder="ex.: Espanha Áustria" /></div>
       </div>
@@ -582,6 +591,7 @@
         <div><label>Arquivo Superbet</label><input id="catGolFileSuperbet" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
         <div><label>Arquivo EstrelaBet</label><input id="catGolFileEstrelabet" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
         <div><label>Arquivo Bet365</label><input id="catGolFileBet365" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
+        <div><label>Arquivo Sportingbet</label><input id="catGolFileSportingbet" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
       </div>
       <hr style="border:0;border-top:1px solid #e5e7eb;margin:16px 0" />
       <div class="grid">
@@ -589,12 +599,14 @@
         <div><label>Stake Superbet (R$)</label><input id="catGolStakeSuperbet" type="number" step="0.01" value="100" /></div>
         <div><label>Stake EstrelaBet (R$)</label><input id="catGolStakeEstrelabet" type="number" step="0.01" value="100" /></div>
         <div><label>Stake Bet365 (R$)</label><input id="catGolStakeBet365" type="number" step="0.01" value="100" /></div>
+        <div><label>Stake Sportingbet (R$)</label><input id="catGolStakeSportingbet" type="number" step="0.01" value="100" /></div>
       </div>
       <div class="grid" style="margin-top:12px">
         <div><label>Bônus Betano sobre lucro (%)</label><input id="catGolBonusBetano" type="number" step="0.01" value="0" /></div>
         <div><label>Bônus Superbet sobre lucro (%)</label><input id="catGolBonusSuperbet" type="number" step="0.01" value="30" /></div>
         <div><label>Bônus EstrelaBet sobre lucro (%)</label><input id="catGolBonusEstrelabet" type="number" step="0.01" value="0" /></div>
         <div><label>Bônus Bet365 sobre lucro (%)</label><input id="catGolBonusBet365" type="number" step="0.01" value="0" /></div>
+        <div><label>Bônus Sportingbet sobre lucro (%)</label><input id="catGolBonusSportingbet" type="number" step="0.01" value="0" /></div>
         <div><label>ROI mínimo (%)</label><input id="catGolRoiMin" type="number" step="0.01" value="0" /></div>
         <div><label>Filtro do jogo (opcional)</label><input id="catGolGameFilter" type="text" value="" placeholder="ex.: Espanha Áustria" /></div>
       </div>
@@ -614,6 +626,7 @@
         <div><label>Arquivo Superbet</label><input id="catResFileSuperbet" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
         <div><label>Arquivo EstrelaBet</label><input id="catResFileEstrelabet" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
         <div><label>Arquivo Bet365</label><input id="catResFileBet365" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
+        <div><label>Arquivo Sportingbet</label><input id="catResFileSportingbet" type="file" accept=".har,.json,.zip,.txt,.html,.htm" /></div>
       </div>
       <hr style="border:0;border-top:1px solid #e5e7eb;margin:16px 0" />
       <div class="grid">
@@ -621,12 +634,14 @@
         <div><label>Stake Superbet (R$)</label><input id="catResStakeSuperbet" type="number" step="0.01" value="100" /></div>
         <div><label>Stake EstrelaBet (R$)</label><input id="catResStakeEstrelabet" type="number" step="0.01" value="100" /></div>
         <div><label>Stake Bet365 (R$)</label><input id="catResStakeBet365" type="number" step="0.01" value="100" /></div>
+        <div><label>Stake Sportingbet (R$)</label><input id="catResStakeSportingbet" type="number" step="0.01" value="100" /></div>
       </div>
       <div class="grid" style="margin-top:12px">
         <div><label>Bônus Betano sobre lucro (%)</label><input id="catResBonusBetano" type="number" step="0.01" value="0" /></div>
         <div><label>Bônus Superbet sobre lucro (%)</label><input id="catResBonusSuperbet" type="number" step="0.01" value="30" /></div>
         <div><label>Bônus EstrelaBet sobre lucro (%)</label><input id="catResBonusEstrelabet" type="number" step="0.01" value="0" /></div>
         <div><label>Bônus Bet365 sobre lucro (%)</label><input id="catResBonusBet365" type="number" step="0.01" value="0" /></div>
+        <div><label>Bônus Sportingbet sobre lucro (%)</label><input id="catResBonusSportingbet" type="number" step="0.01" value="0" /></div>
         <div><label>ROI mínimo (%)</label><input id="catResRoiMin" type="number" step="0.01" value="0" /></div>
         <div><label>Filtro do jogo (opcional)</label><input id="catResGameFilter" type="text" value="" placeholder="ex.: Espanha Áustria" /></div>
       </div>
@@ -2226,6 +2241,112 @@ function extractBet365Groups(items, filter){
   return {groups,markets,oddsN,source:texts[0]?.name||''};
 }
 
+
+function getSBValue(x){
+  if(x===null||x===undefined) return '';
+  if(typeof x==='string') return x;
+  if(typeof x==='number') return String(x);
+  if(typeof x==='object') return String(x.value||x.name||x.label||x.title||'');
+  return String(x||'');
+}
+function sbParam(params,key){
+  if(!Array.isArray(params)) return '';
+  const p=params.find(x=>String(x.key||'').toLowerCase()===String(key||'').toLowerCase());
+  return p?String(p.value??''):'';
+}
+function findSportingbetEvent(items){
+  const candidates=[];
+  for(const cand of extractJsonCandidatesFromItems(items)){
+    const o=cand.obj;
+    if(o?.fixture?.optionMarkets && Array.isArray(o.fixture.optionMarkets)){
+      o.fixture.__sourceUrl=cand.name||'';
+      candidates.push(o.fixture);
+    }
+    if(Array.isArray(o?.fixtures)){
+      for(const f of o.fixtures){
+        if(f?.optionMarkets && Array.isArray(f.optionMarkets)){
+          f.__sourceUrl=cand.name||'';
+          candidates.push(f);
+        }
+      }
+    }
+    if(Array.isArray(o?.splitFixtures)){
+      for(const sf of o.splitFixtures){
+        const f=sf?.fixture||sf;
+        if(f?.optionMarkets && Array.isArray(f.optionMarkets)){
+          f.__sourceUrl=cand.name||'';
+          candidates.push(f);
+        }
+      }
+    }
+  }
+  candidates.sort((a,b)=>(b.optionMarkets?.length||0)-(a.optionMarkets?.length||0));
+  return candidates[0]||null;
+}
+function configureTeamsFromSportingbet(fixture){
+  let home='', away='';
+  const nm=getSBValue(fixture?.name);
+  if(nm) [home,away]=splitTeamsFromName(nm);
+  if(home && away){
+    HOME=normBasic(home); AWAY=normBasic(away); TEAM_ALIASES={};
+    addTeamAlias(home,HOME); addTeamAlias(away,AWAY);
+    addTeamAlias(HOME,HOME); addTeamAlias(AWAY,AWAY);
+  }
+  return {home:HOME,away:AWAY};
+}
+function sbMarketPeriod(m){
+  const p=sbParam(m?.parameters,'Period');
+  if(p==='FirstHalf') return '1T';
+  if(p==='SecondHalf') return '2T';
+  return getPeriod(getSBValue(m?.name));
+}
+function sbMarketLine(m, outs){
+  const dv=sbParam(m?.parameters,'DecimalValue') || sbParam(m?.parameters,'Value') || sbParam(m?.parameters,'IntegerValue');
+  if(dv!==''){
+    const n=parseFloat(String(dv).replace(',','.'));
+    if(Number.isFinite(n)) return n;
+  }
+  return lineFromOutcomes(outs||[]);
+}
+function extractSportingbetGroups(fixture){
+  const groups=[], markets=[]; let oddsN=0;
+  for(const m of (fixture?.optionMarkets||[])){
+    if(String(m?.status||'').toLowerCase()!=='visible') continue;
+    const mn=getSBValue(m.name);
+    const feat={period:sbMarketPeriod(m), category:category(mn), team:teamKey(mn)};
+    const dd={};
+    for(const o of (m.options||[])){
+      if(String(o?.status||'').toLowerCase()!=='visible') continue;
+      const odd=Number(o?.price?.odds);
+      if(!(odd>1)) continue;
+      const on=getSBValue(o.name);
+      const out=normOutcome(on,'',JSON.stringify(o.parameters||{}));
+      const rec={
+        book:'Sportingbet',
+        market_id:String(m.id),
+        market_name:mn,
+        line:null,
+        outcome:on,
+        out_norm:out,
+        odd,
+        selection_id:String(o.id||o?.price?.id||''),
+        info:JSON.stringify(o.parameters||{})
+      };
+      oddsN++;
+      if(!dd[out] || rec.odd>dd[out].odd) dd[out]=rec;
+    }
+    const outs=Object.values(dd);
+    if(outs.length>=2){
+      const line=sbMarketLine(m,outs);
+      for(const o of outs) o.line=line;
+      groups.push({book:'Sportingbet', market_id:String(m.id), market_name:mn, market_norm:normMarket(mn), line, outcomes:outs, ...feat});
+      markets.push({book:'Sportingbet', market_id:String(m.id), market_name:mn, active_odds:outs.length, raw_selections:(m.options||[]).length, ...feat});
+    }
+  }
+  return {groups, markets, oddsN};
+}
+
+
 async function extractBookUniversal(book, file, stake, bonusPct, filter){
   if(!file) return null;
   const items=await readTextItems(file);
@@ -2243,6 +2364,9 @@ async function extractBookUniversal(book, file, stake, bonusPct, filter){
     }else if(book==='Bet365'){
       const ex=extractBet365Groups(items,filter);
       if(ex.groups.length){groups=ex.groups; markets=ex.markets; oddsN=ex.oddsN; mode='Bet365 específico';}
+    }else if(book==='Sportingbet'){
+      const ev=findSportingbetEvent(items);
+      if(ev){configureTeamsFromSportingbet(ev); const ex=extractSportingbetGroups(ev); groups=ex.groups; markets=ex.markets; oddsN=ex.oddsN; mode='Sportingbet específico';}
     }
     if(!groups.length){
       const acc={groups:[],oddsN:0};
@@ -2320,6 +2444,7 @@ async function runMulti(){
     {book:'Superbet',file:document.getElementById('mFileSuperbet').files[0],stake:getNum('mStakeSuperbet',100),bonusPct:getNum('mBonusSuperbet',30)},
     {book:'EstrelaBet',file:document.getElementById('mFileEstrelabet').files[0],stake:getNum('mStakeEstrelabet',100),bonusPct:getNum('mBonusEstrelabet',0)},
     {book:'Bet365',file:document.getElementById('mFileBet365').files[0],stake:getNum('mStakeBet365',100),bonusPct:getNum('mBonusBet365',0)},
+    {book:'Sportingbet',file:document.getElementById('mFileSportingbet').files[0],stake:getNum('mStakeSportingbet',100),bonusPct:getNum('mBonusSportingbet',0)},
   ];
   const loaded=[];
   for(const sp of specs){
@@ -2382,6 +2507,7 @@ function dglog(s){const el=document.getElementById('dgLog'); if(el){el.textConte
 function dgSetLog(s){const el=document.getElementById('dgLog'); if(el) el.textContent=s;}
 function guessBookName(file){
   const n=(file?.name||'').toLowerCase();
+  if(n.includes('sportingbet') || n.includes('sporting')) return 'Sportingbet';
   if(n.includes('bet365')) return 'Bet365';
   if(n.includes('estrela')) return 'EstrelaBet';
   if(n.includes('superbet')) return 'Superbet';
@@ -2390,7 +2516,7 @@ function guessBookName(file){
 }
 async function extractHouseAuto(label,file,stake,bonusPct,filter){
   const guessed=guessBookName(file);
-  const tries=guessed?[guessed]:['Betano','Superbet','EstrelaBet','Bet365'];
+  const tries=guessed?[guessed]:['Betano','Superbet','EstrelaBet','Bet365','Sportingbet'];
   let best=null, bestScore=-1;
   for(const book of tries){
     try{
@@ -2706,6 +2832,7 @@ function categorySpecs(prefix){
     {book:'Superbet',file:document.getElementById(prefix+'FileSuperbet').files[0],stake:getNum(prefix+'StakeSuperbet',100),bonusPct:getNum(prefix+'BonusSuperbet',30)},
     {book:'EstrelaBet',file:document.getElementById(prefix+'FileEstrelabet').files[0],stake:getNum(prefix+'StakeEstrelabet',100),bonusPct:getNum(prefix+'BonusEstrelabet',0)},
     {book:'Bet365',file:document.getElementById(prefix+'FileBet365').files[0],stake:getNum(prefix+'StakeBet365',100),bonusPct:getNum(prefix+'BonusBet365',0)},
+    {book:'Sportingbet',file:document.getElementById(prefix+'FileSportingbet').files[0],stake:getNum(prefix+'StakeSportingbet',100),bonusPct:getNum(prefix+'BonusSportingbet',0)},
   ];
 }
 async function runCategoryMarket(prefix,key,title){
