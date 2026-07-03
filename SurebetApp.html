@@ -406,6 +406,14 @@
       align-items:center;
     }
     .copybtn{background:linear-gradient(135deg,#38bdf8,#2563eb)!important;color:white!important}
+    .syncNote{
+      display:inline-block;
+      margin-left:8px;
+      color:#86efac;
+      font-size:11px;
+      font-weight:900;
+      opacity:.9;
+    }
     .histbtn{background:linear-gradient(135deg,#22c55e,#16a34a)!important;color:#02140a!important}
     @media(max-width:720px){
       .installbar{flex-direction:column;align-items:stretch}
@@ -3133,6 +3141,69 @@ setupCategoryTab('catCar','cartoes','Cartões','surebets_cartoes.xlsx');
 setupCategoryTab('catGol','gols','Gols','surebets_gols.xlsx');
 setupCategoryTab('catRes','resultado','Resultado','surebets_resultado_mercado.xlsx');
 
+
+
+
+// ===== Sincronizar uploads entre abas =====
+// Quando o usuário seleciona um arquivo de uma casa em qualquer aba,
+// o app copia esse mesmo arquivo para os inputs da mesma casa nas outras abas.
+// Isso evita ter que escolher Betano/Superbet/Bet365 etc em cada guia separada.
+const BOOK_FILE_PATTERNS=[
+  {book:'Betano', pattern:/filebetano$/i},
+  {book:'Superbet', pattern:/filesuperbet$/i},
+  {book:'EstrelaBet', pattern:/fileestrelabet$/i},
+  {book:'Bet365', pattern:/filebet365$/i},
+  {book:'Sportingbet', pattern:/filesportingbet$/i}
+];
+function detectBookFromInputId(id){
+  const s=String(id||'');
+  for(const b of BOOK_FILE_PATTERNS){
+    if(b.pattern.test(s)) return b.book;
+  }
+  return '';
+}
+function fileListFromFiles(files){
+  const dt=new DataTransfer();
+  Array.from(files||[]).forEach(f=>dt.items.add(f));
+  return dt.files;
+}
+function addSyncBadge(input, fileName){
+  const wrap=input.closest('div') || input.parentElement;
+  if(!wrap) return;
+  let badge=wrap.querySelector('.syncNote');
+  if(!badge){
+    badge=document.createElement('span');
+    badge.className='syncNote';
+    wrap.appendChild(badge);
+  }
+  badge.textContent=fileName ? 'sincronizado: '+String(fileName).slice(0,28) : '';
+}
+function syncFileToSameBookInputs(source){
+  const book=detectBookFromInputId(source.id);
+  if(!book || !source.files || !source.files.length) return;
+  const files=source.files;
+  const fileName=files[0]?.name||'arquivo';
+  const selector='input[type="file"][id$="File'+book+'"]';
+  document.querySelectorAll(selector).forEach(inp=>{
+    if(inp===source) { addSyncBadge(inp,fileName); return; }
+    try{
+      inp.files=fileListFromFiles(files);
+      addSyncBadge(inp,fileName);
+      inp.dispatchEvent(new Event('lozzy-sync',{bubbles:true}));
+    }catch(e){
+      // Alguns navegadores antigos podem bloquear atribuição programática.
+      // Nesse caso o input original continua funcionando normalmente.
+    }
+  });
+}
+function setupFileUploadSync(){
+  document.querySelectorAll('input[type="file"]').forEach(inp=>{
+    if(inp.dataset.lozzySync) return;
+    inp.dataset.lozzySync='1';
+    inp.addEventListener('change',()=>syncFileToSameBookInputs(inp));
+  });
+}
+document.addEventListener('DOMContentLoaded',setupFileUploadSync);
 
 
 // ===== Calculadora manual =====
