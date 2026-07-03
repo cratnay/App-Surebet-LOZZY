@@ -360,6 +360,13 @@
     .installbar button{width:auto;min-width:140px;padding:10px 12px}
     .installbar .muted{font-size:13px}
     .mobilehint{display:none}
+    .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:12px 0}
+    .kpi{border:1px solid var(--line);border-radius:16px;padding:14px;background:rgba(2,6,23,.45)}
+    .kpi .label{font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:900}
+    .kpi .value{font-size:22px;font-weight:900;margin-top:4px}
+    .calcbox{border:1px solid rgba(34,197,94,.35);border-radius:16px;padding:14px;background:rgba(34,197,94,.06);margin-top:12px}
+    .badbox{border:1px solid rgba(239,68,68,.45);border-radius:16px;padding:14px;background:rgba(239,68,68,.08);margin-top:12px}
+    .miniChart{width:100%;height:300px;border:1px solid var(--line);border-radius:16px;background:rgba(2,6,23,.45);margin-top:12px}
     @media(max-width:720px){
       .installbar{flex-direction:column;align-items:stretch}
       .installbar button{width:100%}
@@ -407,12 +414,13 @@
     <button class="tabbtn active" data-tab="tab-bs">Betano x Superbet</button>
     <button class="tabbtn" data-tab="tab-multi">Multi Casas — 2 apostas</button>
     <button class="tabbtn" data-tab="tab-dg">Duplo Green</button>
-    <button class="tabbtn" data-tab="tab-cat-esc">Escanteios</button>
+<button class="tabbtn" data-tab="tab-cat-esc">Escanteios</button>
     <button class="tabbtn" data-tab="tab-cat-car">Cartões</button>
     <button class="tabbtn" data-tab="tab-cat-gol">Gols</button>
     <button class="tabbtn" data-tab="tab-cat-res">Resultado</button>
-    <button class="tabbtn" data-tab="tab-coletor">Coletor de Mercados</button>
-  </div>
+    <button class="tabbtn" data-tab="tab-calc">Calculadora Manual</button>
+    <button class="tabbtn" data-tab="tab-perfil">Perfil / Histórico</button>
+</div>
 
   <section id="tab-bs" class="tab active">
     <div class="card">
@@ -630,7 +638,84 @@
     <div class="card"><b>Resultados Resultado</b><div id="catResSummary" class="muted"></div><div style="overflow:auto;max-height:560px"><table id="catResTbl"></table></div></div>
   </section>
 
-  <section id="tab-coletor" class="tab">
+
+  <section id="tab-calc" class="tab">
+    <div class="card">
+      <div class="muted small"><span class="pill">Calculadora</span> Calcule manualmente uma surebet de 2 apostas com stake máxima por casa, bônus sobre lucro e ROI.</div>
+      <div class="grid" style="margin-top:12px">
+        <div><label>Casa A</label><input id="calcCasaA" value="Casa A" /></div>
+        <div><label>Odd A</label><input id="calcOddA" type="number" step="0.001" value="2.10" /></div>
+        <div><label>Stake máxima A (R$)</label><input id="calcStakeA" type="number" step="0.01" value="100" /></div>
+        <div><label>Bônus sobre lucro A (%)</label><input id="calcBonusA" type="number" step="0.01" value="0" /></div>
+      </div>
+      <div class="grid" style="margin-top:12px">
+        <div><label>Casa B</label><input id="calcCasaB" value="Casa B" /></div>
+        <div><label>Odd B</label><input id="calcOddB" type="number" step="0.001" value="2.10" /></div>
+        <div><label>Stake máxima B (R$)</label><input id="calcStakeB" type="number" step="0.01" value="100" /></div>
+        <div><label>Bônus sobre lucro B (%)</label><input id="calcBonusB" type="number" step="0.01" value="0" /></div>
+      </div>
+      <p><button id="calcRun">Calcular</button></p>
+      <div id="calcResult"></div>
+    </div>
+  </section>
+
+  <section id="tab-perfil" class="tab">
+    <div class="card">
+      <div class="muted small"><span class="pill">Perfil</span> Salve sua banca inicial, registre apostas feitas e acompanhe lucro/prejuízo e ROI. Os dados ficam salvos apenas no navegador deste dispositivo.</div>
+      <div class="grid" style="margin-top:12px">
+        <div><label>Nome do perfil</label><input id="perfilNome" placeholder="ex.: João" /></div>
+        <div><label>Banca inicial (R$)</label><input id="perfilBancaInicial" type="number" step="0.01" value="0" /></div>
+        <div><label>Banca atual manual (opcional)</label><input id="perfilBancaAtual" type="number" step="0.01" value="" placeholder="opcional" /></div>
+      </div>
+      <div class="btnrow" style="margin-top:12px">
+        <button id="perfilSalvar">Salvar perfil</button>
+        <button id="perfilLimpar" class="dangerbtn">Limpar histórico</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <b>Adicionar aposta feita</b>
+      <div class="grid" style="margin-top:12px">
+        <div><label>Data</label><input id="apostaData" type="date" /></div>
+        <div><label>Mercado / descrição</label><input id="apostaDesc" placeholder="ex.: Escanteios Portugal 1T" /></div>
+        <div><label>Total apostado (R$)</label><input id="apostaStake" type="number" step="0.01" value="0" /></div>
+        <div><label>Retorno recebido (R$)</label><input id="apostaRetorno" type="number" step="0.01" value="0" /></div>
+        <div><label>Tipo</label>
+          <select id="apostaTipo">
+            <option>Surebet</option>
+            <option>Duplo Green</option>
+            <option>Manual</option>
+            <option>Outro</option>
+          </select>
+        </div>
+        <div><label>Status</label>
+          <select id="apostaStatus">
+            <option>Finalizada</option>
+            <option>Pendente</option>
+          </select>
+        </div>
+      </div>
+      <p><button id="apostaAdd">Adicionar aposta</button></p>
+    </div>
+
+    <div class="card">
+      <b>Resumo do perfil</b>
+      <div id="perfilResumo" class="kpis"></div>
+      <canvas id="perfilChart" class="miniChart"></canvas>
+    </div>
+
+    <div class="card">
+      <b>Histórico de apostas</b>
+      <div class="btnrow" style="margin:10px 0">
+        <button id="perfilExportar">Exportar JSON</button>
+        <button id="perfilImportarBtn" class="lightbtn">Importar JSON</button>
+        <input id="perfilImportar" type="file" accept=".json" style="display:none" />
+      </div>
+      <div style="overflow:auto;max-height:560px"><table id="perfilTbl"></table></div>
+    </div>
+  </section>
+
+  <section id="tab-coletor" class="tab" style="display:none">
     <div class="card">
       <div class="muted small"><span class="pill">Coletor</span> Essa guia não captura odds sozinha nem burla login/captcha. Ela automatiza a parte chata de abrir várias abas internas do mesmo jogo, principalmente na Bet365. Deixe o DevTools/Network aberto com <b>Preserve log</b> antes de iniciar e depois exporte o HAR normalmente.</div>
       <div class="grid" style="margin-top:12px">
@@ -2696,6 +2781,180 @@ setupCategoryTab('catEsc','escanteios','Escanteios','surebets_escanteios.xlsx');
 setupCategoryTab('catCar','cartoes','Cartões','surebets_cartoes.xlsx');
 setupCategoryTab('catGol','gols','Gols','surebets_gols.xlsx');
 setupCategoryTab('catRes','resultado','Resultado','surebets_resultado_mercado.xlsx');
+
+
+
+// ===== Calculadora manual =====
+function calcManualSurebet(){
+  const casaA=document.getElementById('calcCasaA').value||'Casa A';
+  const casaB=document.getElementById('calcCasaB').value||'Casa B';
+  const oddA=getNum('calcOddA',0), oddB=getNum('calcOddB',0);
+  const maxA=getNum('calcStakeA',0), maxB=getNum('calcStakeB',0);
+  const bonusA=getNum('calcBonusA',0)/100, bonusB=getNum('calcBonusB',0)/100;
+  const out=document.getElementById('calcResult');
+  if(!(oddA>1)||!(oddB>1)||!(maxA>0)||!(maxB>0)){out.innerHTML='<div class="badbox">Preencha odds maiores que 1 e stakes máximas válidas.</div>';return;}
+  const oddAE=effOdd(oddA,bonusA), oddBE=effOdd(oddB,bonusB);
+  const retorno=Math.min(maxA*oddAE,maxB*oddBE);
+  const stakeA=retorno/oddAE, stakeB=retorno/oddBE;
+  const total=stakeA+stakeB;
+  const lucro=retorno-total;
+  const roi=lucro/total;
+  const inv=(1/oddAE)+(1/oddBE);
+  const nb=noBonusPairMetrics(oddA,oddB,maxA,maxB);
+  const ok=lucro>0;
+  out.innerHTML=`<div class="${ok?'calcbox':'badbox'}">
+    <div class="kpis">
+      <div class="kpi"><div class="label">ROI com bônus</div><div class="value">${dec(roi*100)}%</div></div>
+      <div class="kpi"><div class="label">Lucro com bônus</div><div class="value">${money(lucro)}</div></div>
+      <div class="kpi"><div class="label">ROI sem bônus</div><div class="value">${dec(nb.roi*100)}%</div></div>
+      <div class="kpi"><div class="label">Índice</div><div class="value">${dec(inv,4)}</div></div>
+    </div>
+    <div class="betcards">
+      ${betCardHtml('Aposta 1',casaA,stakeA,'Seleção A',oddA,oddAE,'Aposta manual A','','','')}
+      ${betCardHtml('Aposta 2',casaB,stakeB,'Seleção B',oddB,oddBE,'Aposta manual B','','','')}
+    </div>
+    <p><b>Total apostado:</b> ${money(total)} • <b>Retorno:</b> ${money(retorno)} • <b>Resultado:</b> ${ok?'Surebet positiva':'Não é surebet positiva'}</p>
+  </div>`;
+}
+
+// ===== Perfil / Histórico =====
+const PERFIL_KEY='surebet_lozzy_perfil_v1';
+function perfilDefault(){return {nome:'',bancaInicial:0,bancaAtual:'',apostas:[]};}
+function loadPerfil(){try{return {...perfilDefault(),...(JSON.parse(localStorage.getItem(PERFIL_KEY)||'{}'))};}catch(e){return perfilDefault();}}
+function savePerfil(p){localStorage.setItem(PERFIL_KEY,JSON.stringify(p));}
+function perfilLucro(ap){return (Number(ap.retorno)||0)-(Number(ap.stake)||0);}
+function renderPerfil(){
+  const p=loadPerfil();
+  const nome=document.getElementById('perfilNome'), bi=document.getElementById('perfilBancaInicial'), ba=document.getElementById('perfilBancaAtual');
+  if(nome && document.activeElement!==nome) nome.value=p.nome||'';
+  if(bi && document.activeElement!==bi) bi.value=p.bancaInicial||0;
+  if(ba && document.activeElement!==ba) ba.value=p.bancaAtual||'';
+  const apostas=p.apostas||[];
+  const finalizadas=apostas.filter(a=>a.status!=='Pendente');
+  const totalApostado=finalizadas.reduce((s,a)=>s+(Number(a.stake)||0),0);
+  const retorno=finalizadas.reduce((s,a)=>s+(Number(a.retorno)||0),0);
+  const lucro=retorno-totalApostado;
+  const roi=totalApostado>0?lucro/totalApostado:0;
+  const bancaFinal=(Number(p.bancaInicial)||0)+lucro;
+  const bancaMostrada=p.bancaAtual!==''&&p.bancaAtual!==null&&p.bancaAtual!==undefined?Number(p.bancaAtual):bancaFinal;
+  const resumo=document.getElementById('perfilResumo');
+  if(resumo){resumo.innerHTML=`
+      <div class="kpi"><div class="label">Apostas finalizadas</div><div class="value">${finalizadas.length}</div></div>
+      <div class="kpi"><div class="label">Total apostado</div><div class="value">${money(totalApostado)}</div></div>
+      <div class="kpi"><div class="label">Lucro / prejuízo</div><div class="value">${money(lucro)}</div></div>
+      <div class="kpi"><div class="label">ROI acumulado</div><div class="value">${dec(roi*100)}%</div></div>
+      <div class="kpi"><div class="label">Banca estimada</div><div class="value">${money(bancaMostrada)}</div></div>`;}
+  renderPerfilChart(p); renderPerfilTable(p);
+}
+function renderPerfilChart(p){
+  const canvas=document.getElementById('perfilChart'); if(!canvas) return;
+  const ctx=canvas.getContext('2d'); const ratio=window.devicePixelRatio||1;
+  const cw=canvas.clientWidth||800, ch=canvas.clientHeight||300; canvas.width=cw*ratio; canvas.height=ch*ratio; ctx.setTransform(ratio,0,0,ratio,0,0);
+  ctx.clearRect(0,0,cw,ch);
+
+  // Fundo arredondado
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.lineTo(x+w-r,y);
+    ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r);
+    ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h);
+    ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r);
+    ctx.quadraticCurveTo(x,y,x+r,y);
+    ctx.closePath();
+  }
+  roundRect(0,0,cw,ch,18);
+  ctx.fillStyle='rgba(2,6,23,.35)';
+  ctx.fill();
+
+  const apostas=(p.apostas||[]).filter(a=>a.status!=='Pendente').slice().sort((a,b)=>String(a.data||'').localeCompare(String(b.data||'')));
+  let acum=0; const points=[{y:0}]; apostas.forEach(a=>{acum+=perfilLucro(a); points.push({y:acum});});
+  const pad=38, minY=Math.min(0,...points.map(p=>p.y)), maxY=Math.max(0,...points.map(p=>p.y)), span=(maxY-minY)||1;
+  const xOf=i=>pad+(points.length<=1?0:(i/(points.length-1))*(cw-pad*2));
+  const yOf=v=>ch-pad-((v-minY)/span)*(ch-pad*2);
+  const pts=points.map((pt,i)=>({x:xOf(i),y:yOf(pt.y),val:pt.y}));
+
+  // Grade suave
+  ctx.strokeStyle='rgba(148,163,184,.14)';
+  ctx.lineWidth=1;
+  for(let i=0;i<4;i++){
+    const y=pad+i*((ch-pad*2)/3);
+    ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(cw-pad,y); ctx.stroke();
+  }
+
+  // Linha do zero
+  ctx.strokeStyle='rgba(148,163,184,.38)';
+  ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(pad,yOf(0)); ctx.lineTo(cw-pad,yOf(0)); ctx.stroke();
+
+  // Área abaixo da curva
+  if(pts.length>1){
+    const grad=ctx.createLinearGradient(0,pad,0,ch-pad);
+    grad.addColorStop(0,'rgba(34,197,94,.24)');
+    grad.addColorStop(1,'rgba(34,197,94,.02)');
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x,ch-pad);
+    ctx.lineTo(pts[0].x,pts[0].y);
+    for(let i=0;i<pts.length-1;i++){
+      const p0=pts[i], p1=pts[i+1];
+      const midX=(p0.x+p1.x)/2;
+      ctx.bezierCurveTo(midX,p0.y,midX,p1.y,p1.x,p1.y);
+    }
+    ctx.lineTo(pts[pts.length-1].x,ch-pad);
+    ctx.closePath();
+    ctx.fillStyle=grad;
+    ctx.fill();
+  }
+
+  // Curva arredondada
+  ctx.strokeStyle=acum>=0?'rgba(34,197,94,.98)':'rgba(239,68,68,.98)';
+  ctx.lineWidth=3.5;
+  ctx.lineCap='round';
+  ctx.lineJoin='round';
+  ctx.beginPath();
+  if(pts.length){
+    ctx.moveTo(pts[0].x,pts[0].y);
+    for(let i=0;i<pts.length-1;i++){
+      const p0=pts[i], p1=pts[i+1];
+      const midX=(p0.x+p1.x)/2;
+      ctx.bezierCurveTo(midX,p0.y,midX,p1.y,p1.x,p1.y);
+    }
+  }
+  ctx.stroke();
+
+  // Pontos arredondados
+  pts.forEach((pt)=>{
+    ctx.fillStyle=pt.val>=0?'#22c55e':'#ef4444';
+    ctx.strokeStyle='rgba(2,6,23,.95)';
+    ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(pt.x,pt.y,5,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  });
+
+  ctx.fillStyle='#e5e7eb'; ctx.font='bold 13px Arial'; ctx.fillText(`Lucro acumulado: ${money(acum)}`,pad,20);
+  ctx.fillStyle='#94a3b8'; ctx.font='12px Arial'; ctx.fillText(`Mín: ${money(minY)} • Máx: ${money(maxY)}`,pad,39);
+}
+function renderPerfilTable(p){
+  const tbl=document.getElementById('perfilTbl'); if(!tbl) return;
+  const rows=(p.apostas||[]).map((a,i)=>({'#':i+1,'Data':a.data||'','Descrição':a.desc||'','Tipo':a.tipo||'','Status':a.status||'','Apostado R$':Number(a.stake)||0,'Retorno R$':Number(a.retorno)||0,'Lucro R$':perfilLucro(a),'ROI %':(Number(a.stake)>0?perfilLucro(a)/Number(a.stake)*100:0)}));
+  const cols=['#','Data','Descrição','Tipo','Status','Apostado R$','Retorno R$','Lucro R$','ROI %','Ação'];
+  tbl.innerHTML='<thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+
+    rows.map((r,i)=>'<tr>'+cols.map(c=>{if(c==='Ação') return `<td><button class="dangerbtn" style="width:auto;padding:7px 10px" onclick="perfilDeleteAposta(${i})">Excluir</button></td>`; const v=r[c]; if(c.includes('R$')) return `<td>${money(v)}</td>`; if(c.includes('%')) return `<td>${dec(v)}%</td>`; return `<td>${String(v??'')}</td>`;}).join('')+'</tr>').join('')+'</tbody>';
+}
+function perfilDeleteAposta(i){const p=loadPerfil(); p.apostas.splice(i,1); savePerfil(p); renderPerfil();}
+function setupPerfil(){
+  const data=document.getElementById('apostaData'); if(data && !data.value) data.value=new Date().toISOString().slice(0,10);
+  const salvar=document.getElementById('perfilSalvar'); if(salvar) salvar.onclick=()=>{const p=loadPerfil(); p.nome=document.getElementById('perfilNome').value||''; p.bancaInicial=getNum('perfilBancaInicial',0); const ba=document.getElementById('perfilBancaAtual').value; p.bancaAtual=ba===''?'':Number(ba); savePerfil(p); renderPerfil();};
+  const add=document.getElementById('apostaAdd'); if(add) add.onclick=()=>{const p=loadPerfil(); p.apostas.push({data:document.getElementById('apostaData').value||new Date().toISOString().slice(0,10),desc:document.getElementById('apostaDesc').value||'',stake:getNum('apostaStake',0),retorno:getNum('apostaRetorno',0),tipo:document.getElementById('apostaTipo').value,status:document.getElementById('apostaStatus').value}); savePerfil(p); document.getElementById('apostaDesc').value=''; document.getElementById('apostaStake').value='0'; document.getElementById('apostaRetorno').value='0'; renderPerfil();};
+  const limpar=document.getElementById('perfilLimpar'); if(limpar) limpar.onclick=()=>{if(confirm('Apagar todo o perfil e histórico deste dispositivo?')){localStorage.removeItem(PERFIL_KEY); renderPerfil();}};
+  const exp=document.getElementById('perfilExportar'); if(exp) exp.onclick=()=>{const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(loadPerfil(),null,2)],{type:'application/json'})); a.download='perfil_surebet_lozzy.json'; a.click();};
+  const impBtn=document.getElementById('perfilImportarBtn'), imp=document.getElementById('perfilImportar'); if(impBtn&&imp) impBtn.onclick=()=>imp.click(); if(imp) imp.onchange=async()=>{const f=imp.files[0]; if(!f) return; try{savePerfil(JSON.parse(await f.text())); renderPerfil();}catch(e){alert('JSON inválido.');}};
+  const calc=document.getElementById('calcRun'); if(calc) calc.onclick=calcManualSurebet;
+  renderPerfil();
+}
+document.addEventListener('DOMContentLoaded',setupPerfil);
 
 
 // ===== Coletor de Mercados Bet365 =====
