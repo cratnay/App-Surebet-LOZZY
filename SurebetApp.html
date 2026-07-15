@@ -793,6 +793,7 @@
         <button id="perfilExportar">Exportar JSON</button>
         <button id="perfilImportarBtn" class="lightbtn">Importar JSON</button>
         <input id="perfilImportar" type="file" accept=".json" style="display:none" />
+        <span class="muted small">Ao importar, o histórico é somado ao atual; duplicadas são ignoradas.</span>
       </div>
       <div style="overflow:auto;max-height:560px"><table id="perfilTbl"></table></div>
     </div>
@@ -3753,6 +3754,63 @@ function perfilDefault(){return {nome:'',bancaInicial:0,bancaAtual:'',apostas:[]
 function loadPerfil(){try{return {...perfilDefault(),...(JSON.parse(localStorage.getItem(PERFIL_KEY)||'{}'))};}catch(e){return perfilDefault();}}
 function savePerfil(p){localStorage.setItem(PERFIL_KEY,JSON.stringify(p));}
 
+function stableHistoryKey(a){
+  const pick=[
+    a?.id,
+    a?.data,
+    a?.desc,
+    a?.casaA,
+    a?.casaB,
+    a?.bookA,
+    a?.bookB,
+    a?.oddA,
+    a?.oddB,
+    a?.stake,
+    a?.stakeA,
+    a?.stakeB,
+    a?.recStakeA,
+    a?.recStakeB,
+    a?.retorno,
+    a?.status,
+    a?.resultado,
+    a?.tipo,
+    a?.categoria
+  ].map(v=>String(v??'').trim().toLowerCase()).join('|');
+  return pick;
+}
+function mergePerfilData(atual, importado){
+  const base={...perfilDefault(), ...(atual||{})};
+  const inc={...perfilDefault(), ...(importado||{})};
+  const merged={...base};
+
+  // Não substitui o histórico atual. Só completa campos principais se estiverem vazios.
+  if(!merged.nome && inc.nome) merged.nome=inc.nome;
+  if(!(Number(merged.bancaInicial)>0) && Number(inc.bancaInicial)>0) merged.bancaInicial=Number(inc.bancaInicial)||0;
+
+  const apostas=[...(Array.isArray(base.apostas)?base.apostas:[])];
+  const seen=new Set(apostas.map(stableHistoryKey));
+  let added=0, skipped=0;
+  for(const ap of (Array.isArray(inc.apostas)?inc.apostas:[])){
+    const key=stableHistoryKey(ap);
+    if(seen.has(key)){skipped++; continue;}
+    apostas.push(ap);
+    seen.add(key);
+    added++;
+  }
+  merged.apostas=apostas;
+  return {perfil:merged, added, skipped};
+}
+async function importarPerfilSomando(file){
+  const txt=await file.text();
+  const parsed=JSON.parse(txt);
+  const atual=loadPerfil();
+  const {perfil,added,skipped}=mergePerfilData(atual, parsed);
+  savePerfil(perfil);
+  renderPerfil();
+  alert(`Importação concluída. ${added} aposta(s) adicionada(s). ${skipped} duplicada(s) ignorada(s).`);
+}
+
+
 function normPerfilStatus(a){
   const s=String(a?.status||'').toLowerCase();
   const r=String(a?.resultado||'').toLowerCase();
@@ -4109,7 +4167,7 @@ const add=document.getElementById('apostaAdd');
   updateManualFormVisibility();
   const limpar=document.getElementById('perfilLimpar'); if(limpar) limpar.onclick=()=>{if(confirm('Apagar todo o perfil e histórico deste dispositivo?')){localStorage.removeItem(PERFIL_KEY); renderPerfil();}};
   const exp=document.getElementById('perfilExportar'); if(exp) exp.onclick=()=>{const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(loadPerfil(),null,2)],{type:'application/json'})); a.download='perfil_surebet_lozzy.json'; a.click();};
-  const impBtn=document.getElementById('perfilImportarBtn'), imp=document.getElementById('perfilImportar'); if(impBtn&&imp) impBtn.onclick=()=>imp.click(); if(imp) imp.onchange=async()=>{const f=imp.files[0]; if(!f) return; try{savePerfil(JSON.parse(await f.text())); renderPerfil();}catch(e){alert('JSON inválido.');}};
+  const impBtn=document.getElementById('perfilImportarBtn'), imp=document.getElementById('perfilImportar'); if(impBtn&&imp) impBtn.onclick=()=>imp.click(); if(imp) imp.onchange=async()=>{const f=imp.files[0]; if(!f) return; try{await importarPerfilSomando(f); imp.value='';}catch(e){alert('JSON inválido ou incompatível.');}};
   const calc=document.getElementById('calcRun'); if(calc) calc.onclick=calcManualSurebet;
   renderPerfil();
 }
